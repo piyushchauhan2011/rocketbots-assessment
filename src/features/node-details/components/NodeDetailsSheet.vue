@@ -1,32 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import { Save, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { getDescendantIds, getNodeSummary } from '@/features/flow/lib/graph'
 import {
@@ -39,23 +20,24 @@ import {
   validateBusinessHours,
   validateMessagePayload,
 } from '@/features/nodes/lib/nodeSchemas'
+import type { NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 import AddCommentEditor from './AddCommentEditor.vue'
 import BusinessHoursEditor from './BusinessHoursEditor.vue'
 import SendMessageEditor from './SendMessageEditor.vue'
 
-const props = defineProps({ records: { type: Array, required: true } })
-const emit = defineEmits(['closed'])
+const props = defineProps<{ records: NodeRecord[] }>()
+const emit = defineEmits<{ closed: [nodeId: string | null] }>()
 const route = useRoute()
 const router = useRouter()
 const store = useFlowUiStore()
 const updateMutation = useUpdateNodeMutation()
 const deleteMutation = useDeleteNodesMutation()
-const draft = ref(null)
+const draft = ref<{ name: string; data: Record<string, unknown> } | null>(null)
 const originalDraft = ref('')
-const confirmMode = ref(null)
-const pendingRoute = ref(null)
+const confirmMode = ref<'dirty' | 'delete' | 'leaving' | null>(null)
+const pendingRoute = ref<string | null>(null)
 
 const routeId = computed(() => (route.params.nodeId ? String(route.params.nodeId) : null))
 const record = computed(() => props.records.find((item) => String(item.id) === routeId.value))
@@ -72,25 +54,25 @@ const canSave = computed(
   () => dirty.value && !validationError.value && !updateMutation.isPending.value,
 )
 
-function copy(value) {
-  return JSON.parse(JSON.stringify(value))
+function copy<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
 }
 
-function makeDraft(source) {
+function makeDraft(source: NodeRecord) {
   const data = copy(source.data || {})
   data.description = data.description || getNodeSummary(source)
   if (source.type === 'sendMessage') data.payload = data.payload || []
   if (source.type === 'addComment') data.comment = data.comment || ''
   return { name: source.name || '', data }
 }
-function validateComment(value) {
+function validateComment(value: { data: Record<string, unknown> }) {
   const comment = value.data.comment?.trim() || ''
   return comment.length >= 1 && comment.length <= 1000
     ? null
     : 'Comment must contain 1–1000 characters'
 }
 
-function validateHours(value) {
+function validateHours(value: { data: Record<string, unknown> }) {
   const zones = new Set([
     'UTC',
     'Asia/Kuala_Lumpur',
@@ -106,7 +88,7 @@ const TYPE_VALIDATORS = {
   dateTime: validateHours,
 }
 
-function validateCommon(value) {
+function validateCommon(value: { name: string; data: Record<string, unknown> }) {
   const title = value.name.trim()
   const description = value.data.description?.trim() || ''
   if (!title || title.length > TITLE_MAX) return 'Title must contain 1–80 characters'
@@ -116,7 +98,7 @@ function validateCommon(value) {
   return null
 }
 
-function validateDraft(value) {
+function validateDraft(value: { name: string; data: Record<string, unknown> } | null) {
   if (!value) return 'Node data is unavailable'
   const commonError = validateCommon(value)
   if (commonError) return commonError
@@ -186,7 +168,7 @@ async function save() {
     originalDraft.value = JSON.stringify(draft.value)
     toast.success('Node saved')
   } catch (error) {
-    toast.error(error.message)
+    toast.error((error as Error).message)
   }
 }
 function requestDelete() {
@@ -201,36 +183,50 @@ async function deleteNode() {
     toast.success(`${record.value.name || 'Node'} deleted`)
     closeNow()
   } catch (error) {
-    toast.error(error.message)
+    toast.error((error as Error).message)
   }
 }
 </script>
 
 <template>
-  <Sheet :open="open" @update:open="(nextOpen) => !nextOpen && requestClose()">
-    <SheetContent
-      side="right"
-      class="sheet flex w-full flex-col gap-0 p-0 outline-none sm:max-w-[440px]"
-      @escape-key-down.prevent="requestClose"
+  <div v-if="open" class="fixed inset-0 z-40">
+    <button
+      class="absolute inset-0 bg-black/35"
+      aria-label="Dismiss details overlay"
+      @click="requestClose"
+    />
+    <aside
+      class="sheet absolute top-0 right-0 flex h-full w-full max-w-[440px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"
+      tabindex="-1"
+      @keydown.escape.prevent="requestClose"
     >
+      <button
+        aria-label="Close details"
+        class="absolute top-4 right-4 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+        @click="requestClose"
+      >
+        Close
+      </button>
       <template v-if="!record">
-        <SheetHeader class="border-b p-6 pr-12 text-left">
+        <header class="border-b p-6 pr-12 text-left">
           <Badge variant="secondary" class="w-fit">Unavailable</Badge>
-          <SheetTitle>Node not found</SheetTitle>
-          <SheetDescription>The requested node does not exist in this flow.</SheetDescription>
-        </SheetHeader>
+          <h2 class="mt-2 text-xl font-semibold">Node not found</h2>
+          <p class="text-sm text-muted-foreground">
+            The requested node does not exist in this flow.
+          </p>
+        </header>
         <div class="flex-1 p-6" />
-        <SheetFooter class="border-t p-4">
+        <footer class="border-t p-4">
           <Button variant="outline" @click="requestClose">Close</Button>
-        </SheetFooter>
+        </footer>
       </template>
       <template v-else-if="draft">
-        <SheetHeader class="border-b bg-muted/20 p-6 pr-12 text-left">
+        <header class="border-b bg-muted/20 p-6 pr-12 text-left">
           <Badge variant="secondary" class="w-fit capitalize">{{ record.type }}</Badge>
-          <SheetTitle class="truncate text-xl">{{ draft.name || 'Untitled node' }}</SheetTitle>
-          <SheetDescription>Edit this node’s content and behavior.</SheetDescription>
-        </SheetHeader>
-        <ScrollArea class="min-h-0 flex-1">
+          <h2 class="mt-2 truncate text-xl font-semibold">{{ draft.name || 'Untitled node' }}</h2>
+          <p class="text-sm text-muted-foreground">Edit this node’s content and behavior.</p>
+        </header>
+        <div class="min-h-0 flex-1 overflow-y-auto">
           <div class="p-6">
             <div class="grid gap-5">
               <div class="grid gap-2">
@@ -265,8 +261,8 @@ async function deleteNode() {
               {{ validationError }}
             </p>
           </div>
-        </ScrollArea>
-        <SheetFooter class="flex-row items-center justify-between border-t bg-background p-4">
+        </div>
+        <footer class="flex flex-row items-center justify-between border-t bg-background p-4">
           <Button
             variant="ghost"
             class="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -276,55 +272,46 @@ async function deleteNode() {
             <Trash2 /> Delete
           </Button>
           <Button :disabled="!canSave" @click="save"><Save /> Save changes</Button>
-        </SheetFooter>
+        </footer>
       </template>
-    </SheetContent>
-  </Sheet>
+    </aside>
+  </div>
 
-  <AlertDialog
-    :open="confirmMode === 'dirty'"
-    @update:open="(nextOpen) => !nextOpen && (confirmMode = null)"
+  <div
+    v-if="confirmMode === 'dirty'"
+    class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
   >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-        <AlertDialogDescription>Your edits have not been saved.</AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel @click="confirmMode = null">Keep editing</AlertDialogCancel>
-        <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          @click="discardAndLeave"
-        >
-          Discard changes
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+    <div role="alertdialog" class="w-full max-w-sm rounded-lg border bg-background p-5 shadow-xl">
+      <h3 class="text-lg font-semibold">Discard unsaved changes?</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Your edits have not been saved.</p>
+      <div class="mt-4 flex justify-end gap-2">
+        <Button variant="outline" @click="confirmMode = null">Keep editing</Button>
+        <Button variant="destructive" @click="discardAndLeave">Discard changes</Button>
+      </div>
+    </div>
+  </div>
 
-  <AlertDialog
-    :open="confirmMode === 'delete'"
-    @update:open="(nextOpen) => !nextOpen && (confirmMode = null)"
+  <div
+    v-if="confirmMode === 'delete'"
+    class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
   >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Delete {{ record?.name || 'node' }}?</AlertDialogTitle>
-        <AlertDialogDescription>
-          This also deletes {{ descendants.length }} descendant{{
-            descendants.length === 1 ? '' : 's'
-          }}. This action cannot be undone.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel @click="confirmMode = null">Cancel</AlertDialogCancel>
-        <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+    <div role="alertdialog" class="w-full max-w-sm rounded-lg border bg-background p-5 shadow-xl">
+      <h3 class="text-lg font-semibold">Delete {{ record?.name || 'node' }}?</h3>
+      <p class="mt-1 text-sm text-muted-foreground">
+        This also deletes {{ descendants.length }} descendant{{
+          descendants.length === 1 ? '' : 's'
+        }}. This action cannot be undone.
+      </p>
+      <div class="mt-4 flex justify-end gap-2">
+        <Button variant="outline" @click="confirmMode = null">Cancel</Button>
+        <Button
+          variant="destructive"
           :disabled="deleteMutation.isPending.value"
           @click="deleteNode"
         >
           Delete
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+        </Button>
+      </div>
+    </div>
+  </div>
 </template>

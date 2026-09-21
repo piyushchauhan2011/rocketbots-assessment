@@ -1,9 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-defineProps({ modelValue: { type: String, required: true } })
-defineEmits(['update:modelValue'])
+defineProps<{ modelValue: string }>()
+defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>

@@ -1,13 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
 import { Clock3, MessageSquare, MessageSquareText, Play, Split } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import { Card } from '@/components/ui/card'
+import type { NodeRecord } from '@/features/nodes/lib/types'
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ id: String, data: Object, selected: Boolean, nodeType: String })
+const props = defineProps<{
+  id: string
+  data: {
+    record: NodeRecord
+    summary: string
+    onOpen?: (nodeId: string) => void
+    onCreate?: (parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') => void
+  }
+  selected: boolean
+  nodeType: string
+}>()
 
 const config = computed(() => {
   const type = props.nodeType
@@ -25,9 +36,19 @@ const config = computed(() => {
 })
 const editable = computed(() => !['trigger', 'dateTimeConnector'].includes(props.nodeType))
 const title = computed(() => props.data.record.name || config.value.label)
+const connectorLabel = computed(() =>
+  props.nodeType === 'dateTimeConnector'
+    ? props.data.record.data?.connectorType === 'success'
+      ? 'Success'
+      : 'Failure'
+    : null,
+)
 
 function activate() {
   if (editable.value) props.data.onOpen?.(props.id)
+}
+function addChild(type: 'sendMessage' | 'addComment' | 'businessHours') {
+  props.data.onCreate?.(props.id, type)
 }
 </script>
 
@@ -67,6 +88,35 @@ function activate() {
       class="line-clamp-2 min-h-[3.5rem] px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
     >
       {{ data.summary }}
+    </div>
+    <div class="flex items-center justify-between border-t bg-muted/20 px-2.5 py-2 text-[11px]">
+      <span class="font-medium text-muted-foreground">
+        {{ nodeType === 'trigger' ? 'Start flow' : connectorLabel || 'Next step' }}
+      </span>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="rounded border px-1.5 py-0.5 hover:bg-background"
+          @click="addChild('sendMessage')"
+        >
+          + Message
+        </button>
+        <button
+          type="button"
+          class="rounded border px-1.5 py-0.5 hover:bg-background"
+          @click="addChild('addComment')"
+        >
+          + Comment
+        </button>
+        <button
+          type="button"
+          v-if="nodeType !== 'businessHours'"
+          class="rounded border px-1.5 py-0.5 hover:bg-background"
+          @click="addChild('businessHours')"
+        >
+          + Hours
+        </button>
+      </div>
     </div>
   </Card>
   <Handle type="source" :position="Position.Bottom" />

@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --deny-warnings src tests vite.config.js",
+    "lint": "oxlint --deny-warnings src tests vite.config.ts playwright.config.ts",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
     "test:e2e": "playwright test"
@@ -26,7 +27,6 @@
     "clsx": "^2.1.1",
     "lucide-vue-next": "latest",
     "pinia": "latest",
-    "reka-ui": "^2.10.4",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "latest",
     "vee-validate": "latest",
@@ -37,15 +37,17 @@
   },
   "devDependencies": {
     "@playwright/test": "latest",
+    "@types/node": "^24.6.0",
     "@vitejs/plugin-vue": "latest",
     "@vitest/coverage-v8": "latest",
     "@vue/test-utils": "latest",
     "jsdom": "latest",
     "oxfmt": "latest",
     "oxlint": "latest",
-    "shadcn-vue": "^2.8.2",
+    "typescript": "^5.9.3",
     "vite": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "vue-tsc": "^3.1.1"
   },
   "packageManager": "pnpm@12.4.2"
 }

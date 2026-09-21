@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ImagePlus, Plus, Trash2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -7,17 +7,18 @@ import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { validateUpload } from '@/features/nodes/lib/nodeSchemas'
+import type { MessagePayloadItem } from '@/features/nodes/lib/types'
 
-const props = defineProps({ modelValue: { type: Array, required: true } })
-const emit = defineEmits(['update:modelValue'])
+const props = defineProps<{ modelValue: MessagePayloadItem[] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: MessagePayloadItem[]] }>()
 const uploadError = ref('')
 
-function replace(index, item) {
+function replace(index: number, item: MessagePayloadItem) {
   const next = props.modelValue.slice()
   next[index] = item
   emit('update:modelValue', next)
 }
-function remove(index) {
+function remove(index: number) {
   emit(
     'update:modelValue',
     props.modelValue.filter((_item, itemIndex) => itemIndex !== index),
@@ -26,19 +27,20 @@ function remove(index) {
 function appendText() {
   emit('update:modelValue', [...props.modelValue, { type: 'text', text: '' }])
 }
-function readFile(file) {
+function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
+    reader.onload = () => resolve(String(reader.result))
     reader.onerror = () => reject(new Error('Could not read this image'))
     reader.readAsDataURL(file)
   })
 }
-async function upload(event) {
+async function upload(event: Event) {
   uploadError.value = ''
   const accepted = []
   const validationPayload = [...props.modelValue]
-  for (const file of event.target.files || []) {
+  const target = event.target as HTMLInputElement
+  for (const file of target.files || []) {
     const validation = validateUpload(file, validationPayload)
     if (validation) {
       uploadError.value = validation
@@ -55,9 +57,9 @@ async function upload(event) {
     const additions = attachments.map((attachment) => ({ type: 'attachment', attachment }))
     emit('update:modelValue', [...props.modelValue, ...additions])
   } catch (readError) {
-    uploadError.value = readError.message
+    uploadError.value = (readError as Error).message
   }
-  event.target.value = ''
+  target.value = ''
 }
 </script>
 

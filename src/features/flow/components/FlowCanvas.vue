@@ -1,38 +1,47 @@
-<script setup>
+<script setup lang="ts">
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { VueFlow } from '@vue-flow/core'
 import { computed, nextTick, ref } from 'vue'
 
+import type { Position as NodePosition, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 import { buildFlowEdges, buildFlowNodes } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
 
-const props = defineProps({ records: { type: Array, required: true } })
-const emit = defineEmits(['open-node'])
+const props = defineProps<{ records: NodeRecord[] }>()
+const emit = defineEmits<{
+  'open-node': [nodeId: string]
+  'create-node': [parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours']
+}>()
 const store = useFlowUiStore()
-const dragStart = ref(null)
+const dragStart = ref<{ nodeId: string; position: NodePosition } | null>(null)
 
 const nodes = computed(() =>
   buildFlowNodes(props.records, store.positions).map((node) => ({
     ...node,
-    data: { ...node.data, onOpen: openNode },
+    data: {
+      ...node.data,
+      onOpen: openNode,
+      onCreate: (parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') =>
+        emit('create-node', parentId, type),
+    },
   })),
 )
 const edges = computed(() => buildFlowEdges(props.records))
 
-function openNode(nodeId) {
+function openNode(nodeId: string) {
   store.focusNode(nodeId)
   emit('open-node', nodeId)
 }
-function onNodeClick({ node }) {
+function onNodeClick({ node }: { node: { selectable?: boolean; id: string } }) {
   if (node.selectable !== false) openNode(node.id)
 }
-function onDragStart({ node }) {
+function onDragStart({ node }: { node: { id: string; position: NodePosition } }) {
   dragStart.value = { nodeId: node.id, position: { ...node.position } }
 }
-function onDragStop({ node }) {
+function onDragStop({ node }: { node: { id: string; position: NodePosition } }) {
   const before = dragStart.value?.position
   const after = { ...node.position }
   dragStart.value = null
@@ -41,7 +50,7 @@ function onDragStop({ node }) {
   store.record({ kind: 'move', nodeId: node.id, before, after })
 }
 
-async function focusNode(nodeId) {
+async function focusNode(nodeId: string | number) {
   await nextTick()
   document.querySelector(`[data-id="${CSS.escape(String(nodeId))}"] .flow-node`)?.focus()
 }

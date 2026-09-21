@@ -38,7 +38,7 @@ pnpm preview --host 127.0.0.1 # Local production preview
 - `src/features/flow`: graph conversion, deterministic layout, Vue Flow canvas, positions, history, and shortcuts.
 - `src/features/nodes`: local repository boundary, TanStack Query hooks, node creation, and validation.
 - `src/features/node-details`: URL-driven details Sheet and type-specific editors.
-- `src/stores/flowUi.js`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
+- `src/stores/flowUi.ts`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
 - `src/router`: `/` and `/nodes/:nodeId` history routes.
 - `tests`: pure-domain unit tests, FlowView integration tests, deterministic Playwright workflows, and fixtures.
 
@@ -61,7 +61,7 @@ duplicate ID, and storage quota failures are surfaced in the UI and optimistic m
 
 ## Editing rules
 
-- Creation supports Send Message, Add Comment, and Business Hours roots.
+- Creation is inline on the canvas via per-node branch controls (`+ Message`, `+ Comment`, `+ Hours`).
 - Titles are required and limited to 80 characters; descriptions are required and limited to 240.
 - Send Message must contain non-empty text or an attachment before save.
 - Images: JPEG/PNG/WebP/GIF, maximum four files, 750 KiB each, and 3 MiB total encoded local data. Images persist as data URLs because no upload API is supplied.

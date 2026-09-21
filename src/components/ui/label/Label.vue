@@ -1,22 +1,20 @@
-<script setup>
-import { reactiveOmit } from '@vueuse/core'
-import { Label } from 'reka-ui'
-
+<script setup lang="ts">
 import { cn } from '@/lib/utils'
 
-const props = defineProps({
-  for: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-})
-
-const delegatedProps = reactiveOmit(props, 'class')
+const props = withDefaults(
+  defineProps<{
+    for?: string
+    class?: string
+    as?: string
+  }>(),
+  { as: 'label' },
+)
 </script>
 
 <template>
-  <Label
-    v-bind="delegatedProps"
+  <component
+    :is="as"
+    :for="for"
     :class="
       cn(
         'text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
@@ -25,5 +23,5 @@ const delegatedProps = reactiveOmit(props, 'class')
     "
   >
     <slot />
-  </Label>
+  </component>
 </template>

@@ -1,14 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { BusinessHourTime } from '@/features/nodes/lib/types'
 
-const props = defineProps({
-  times: { type: Array, required: true },
-  timezone: { type: String, required: true },
-})
-const emit = defineEmits(['update:times', 'update:timezone'])
+const props = defineProps<{ times: BusinessHourTime[]; timezone: string }>()
+const emit = defineEmits<{
+  'update:times': [value: BusinessHourTime[]]
+  'update:timezone': [value: string]
+}>()
 const labels = {
   mon: 'Mon',
   tue: 'Tue',
@@ -23,9 +24,9 @@ const timezones = computed(() => [
   ...new Set(['UTC', 'Asia/Kuala_Lumpur', browserTimezone].filter(Boolean)),
 ])
 
-function update(index, field, value) {
+function update(index: number, field: 'startTime' | 'endTime', value: string | number | undefined) {
   const next = props.times.map((time, itemIndex) =>
-    itemIndex === index ? { ...time, [field]: value } : time,
+    itemIndex === index ? { ...time, [field]: String(value ?? '') } : time,
   )
   emit('update:times', next)
 }
