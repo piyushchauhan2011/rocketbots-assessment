@@ -12,6 +12,7 @@ test.beforeEach(async ({ page }) => {
     if (sessionStorage.getItem('flow-test-initialized')) return
     localStorage.removeItem('rocketbots-flow:v1')
     localStorage.removeItem('rocketbots-flow-positions:v1')
+    localStorage.removeItem('rocketbots-flow-positions:v2')
     sessionStorage.setItem('flow-test-initialized', 'true')
   })
   await page.route(remote, (route) => route.fulfill({ json: payload }))

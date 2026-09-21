@@ -1,7 +1,7 @@
 import type { NodeRecord, Position } from '@/features/nodes/lib/types'
 
-export const X_GAP = 280
-export const Y_GAP = 220
+export const X_GAP = 320
+export const Y_GAP = 248
 
 function id(value: unknown): string {
   return String(value)
@@ -14,7 +14,7 @@ const SUMMARY_BY_TYPE = {
     return text || 'Message with attachment'
   },
   addComment: (record: NodeRecord) => record.data?.comment?.trim() || 'Comment',
-  dateTime: (record: NodeRecord) => `${record.data?.timezone || 'UTC'} business hours`,
+  dateTime: (record: NodeRecord) => `Business hours - ${record.data?.timezone || 'UTC'}`,
   dateTimeConnector: (record: NodeRecord) => `${record.data?.connectorType || ''} path`.trim(),
 }
 
@@ -38,7 +38,11 @@ export function buildFlowEdges(records: NodeRecord[]) {
         id: `edge-${parent}-${id(record.id)}`,
         source: parent,
         target: id(record.id),
-        type: 'smoothstep',
+        type: 'smoothstep' as const,
+        selectable: false,
+        focusable: false,
+        pathOptions: { borderRadius: 16, offset: 16 },
+        style: { stroke: '#f0a898', strokeWidth: 2 },
       },
     ]
   })

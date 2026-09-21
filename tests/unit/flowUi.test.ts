@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { useFlowUiStore } from '@/stores/flowUi'
+import { POSITIONS_STORAGE_KEY, useFlowUiStore } from '@/stores/flowUi'
 
 beforeEach(() => setActivePinia(createPinia()))
 
@@ -10,7 +10,7 @@ describe('flow UI state', () => {
     const store = useFlowUiStore()
     store.setPosition(1, { x: 2, y: 3 })
     store.setPositions({ two: { x: 4, y: 5 } })
-    expect(JSON.parse(localStorage.getItem('rocketbots-flow-positions:v1'))).toEqual({
+    expect(JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}')).toEqual({
       1: { x: 2, y: 3 },
       two: { x: 4, y: 5 },
     })

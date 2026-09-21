@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 import type { FlowNodeCommand, Position } from '@/features/nodes/lib/types'
 
-export const POSITIONS_STORAGE_KEY = 'rocketbots-flow-positions:v1'
+export const POSITIONS_STORAGE_KEY = 'rocketbots-flow-positions:v2'
 const HISTORY_LIMIT = 50
 
 function loadPositions(): Record<string, Position> {

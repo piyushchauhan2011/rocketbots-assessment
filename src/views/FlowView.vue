@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import { X_GAP, Y_GAP, layoutGraph } from '@/features/flow/lib/graph'
+import { getDescendantIds, X_GAP, Y_GAP, layoutGraph } from '@/features/flow/lib/graph'
 import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
 import { useCreateNodeMutation, useNodesQuery } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
@@ -45,8 +45,20 @@ function getCreatePositions(
 ): Record<string, Position> {
   const fallback = layoutGraph(existing)
   const parentPosition = store.positions[parentId] || fallback[parentId] || { x: 0, y: 0 }
+  const siblings = existing.filter((record) => String(record.parentId) === parentId)
+  let baseX = parentPosition.x
+  if (siblings.length) {
+    const occupied = siblings.flatMap((sibling) => {
+      const siblingId = String(sibling.id)
+      return [siblingId, ...getDescendantIds(existing, siblingId)].map(
+        (nodeId) => store.positions[nodeId]?.x ?? fallback[nodeId]?.x ?? parentPosition.x,
+      )
+    })
+    const branchSpread = created.length === 3 ? X_GAP / 2 : 0
+    baseX = Math.max(...occupied) + X_GAP + branchSpread
+  }
   const root = created[0]
-  const base = { x: parentPosition.x, y: parentPosition.y + Y_GAP }
+  const base = { x: baseX, y: parentPosition.y + Y_GAP }
   const next: Record<string, Position> = { [String(root.id)]: base }
   if (created.length === 3) {
     next[String(created[1].id)] = { x: base.x - X_GAP / 2, y: base.y + Y_GAP }
@@ -58,10 +70,11 @@ function getCreatePositions(
 async function createNode(parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') {
   const created = createNodeRecords(parentId, type)
   const positions = getCreatePositions(records.value, parentId, created)
+  store.setPositions(positions)
   try {
     await createMutation.mutateAsync(created)
-    store.setPositions(positions)
     openNode(String(created[0].id))
+    await canvas.value?.revealNode(String(created[0].id))
     toast.success(`${created[0].name || 'Node'} created`)
   } catch (error) {
     store.removePositions(Object.keys(positions))

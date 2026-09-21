@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Save, Trash2 } from 'lucide-vue-next'
+import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -53,6 +53,40 @@ const validationError = computed(() => validateDraft(draft.value))
 const canSave = computed(
   () => dirty.value && !validationError.value && !updateMutation.isPending.value,
 )
+const headerMeta = computed(() => {
+  const type = record.value?.type
+  if (type === 'dateTime') {
+    return {
+      label: 'Business Hours',
+      helper:
+        'Assign a period to be considered based on date & time condition. Use business hours or date range condition.',
+      color: '#ef4444',
+      icon: Clock3,
+    }
+  }
+  if (type === 'sendMessage') {
+    return {
+      label: 'Send Message',
+      helper: 'Edit the message sent on this path.',
+      color: '#22c55e',
+      icon: MessageSquare,
+    }
+  }
+  if (type === 'addComment') {
+    return {
+      label: 'Add Comment',
+      helper: 'Edit the internal note left on this path.',
+      color: '#64748b',
+      icon: MessageSquareText,
+    }
+  }
+  return {
+    label: 'Node',
+    helper: 'Edit this node’s content and behavior.',
+    color: '#64748b',
+    icon: MessageSquare,
+  }
+})
 
 function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -175,15 +209,22 @@ function requestDelete() {
   confirmMode.value = 'delete'
 }
 async function deleteNode() {
-  const ids = [String(record.value.id), ...descendants.value]
+  const current = record.value
+  if (!current) return
+  const ids = [String(current.id), ...descendants.value]
+  const name = current.name || 'Node'
+  const nodeId = String(current.id)
+  confirmMode.value = 'leaving'
+  await router.push({ name: 'flow' })
+  emit('closed', nodeId)
   try {
     await deleteMutation.mutateAsync(ids)
     store.removePositions(ids)
-    confirmMode.value = null
-    toast.success(`${record.value.name || 'Node'} deleted`)
-    closeNow()
+    toast.success(`${name} deleted`)
   } catch (error) {
     toast.error((error as Error).message)
+  } finally {
+    confirmMode.value = null
   }
 }
 </script>
@@ -201,7 +242,7 @@ async function deleteNode() {
     <Transition name="flow-sheet-panel">
       <aside
         v-if="open"
-        class="sheet pointer-events-auto absolute top-0 right-0 flex h-full w-full max-w-[440px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"
+        class="sheet pointer-events-auto absolute top-0 right-0 flex h-full w-full max-w-[520px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"
         tabindex="-1"
         @keydown.escape.prevent="requestClose"
       >
@@ -226,10 +267,21 @@ async function deleteNode() {
           </footer>
         </template>
         <template v-else-if="draft">
-          <header class="border-b bg-muted/20 p-6 pr-12 text-left">
-            <Badge variant="secondary" class="w-fit capitalize">{{ record.type }}</Badge>
-            <h2 class="mt-2 truncate text-xl font-semibold">{{ draft.name || 'Untitled node' }}</h2>
-            <p class="text-sm text-muted-foreground">Edit this node’s content and behavior.</p>
+          <header class="border-b bg-white p-6 pr-16 text-left">
+            <div class="flex items-start gap-3">
+              <span
+                class="grid size-9 shrink-0 place-items-center rounded-lg text-white shadow-sm"
+                :style="{ backgroundColor: headerMeta.color }"
+              >
+                <component :is="headerMeta.icon" :size="18" />
+              </span>
+              <span class="min-w-0">
+                <h2 class="truncate text-lg font-semibold text-slate-900">
+                  {{ draft.name || headerMeta.label }}
+                </h2>
+                <p class="mt-1 text-sm leading-5 text-muted-foreground">{{ headerMeta.helper }}</p>
+              </span>
+            </div>
           </header>
           <div class="min-h-0 flex-1 overflow-y-auto">
             <div class="p-6">

@@ -23,50 +23,22 @@ const props = defineProps<{
 
 const config = computed(() => {
   const type = props.nodeType
-  if (type === 'trigger') return { label: 'Trigger', color: '#2563eb', icon: Play }
+  if (type === 'trigger') return { label: 'Trigger', color: '#f43f5e', icon: Play }
   if (type === 'sendMessage')
-    return { label: 'Send Message', color: '#0ea5e9', icon: MessageSquare }
+    return { label: 'Send Message', color: '#22c55e', icon: MessageSquare }
   if (type === 'addComment')
-    return { label: 'Add Comment', color: '#8b5cf6', icon: MessageSquareText }
-  if (type === 'businessHours') return { label: 'Business Hours', color: '#16a34a', icon: Clock3 }
+    return { label: 'Add Comment', color: '#64748b', icon: MessageSquareText }
+  if (type === 'businessHours') return { label: 'Business Hours', color: '#ef4444', icon: Clock3 }
   return {
     label: props.data.record.data?.connectorType || 'Connector',
-    color: '#64748b',
+    color: '#3b82f6',
     icon: Split,
   }
 })
 const editable = computed(() => !['trigger', 'dateTimeConnector'].includes(props.nodeType))
 const isConnectorNode = computed(() => props.nodeType === 'dateTimeConnector')
 const title = computed(() => props.data.record.name || config.value.label)
-const connectorLabel = computed(() =>
-  props.nodeType === 'dateTimeConnector'
-    ? props.data.record.data?.connectorType === 'success'
-      ? 'Success'
-      : 'Failure'
-    : null,
-)
-const connectorFooterLabel = computed(() =>
-  isConnectorNode.value ? '' : connectorLabel || 'Next step',
-)
 const canAddHours = computed(() => props.nodeType !== 'businessHours')
-const addTriggerOffset = computed(() => {
-  if (props.data.hasChildren) return isConnectorNode.value ? '44px' : '30px'
-  return '10px'
-})
-const addStemStyle = computed(() => ({
-  top: '100%',
-  height: addTriggerOffset.value,
-}))
-const addTriggerStyle = computed(() => ({
-  top: `calc(100% + ${addTriggerOffset.value})`,
-}))
-const addMenuStyle = computed(() => ({
-  top: `calc(100% + ${addTriggerOffset.value} + 42px)`,
-}))
-const addContinuationStyle = computed(() => ({
-  top: `calc(100% + ${addTriggerOffset.value} + 32px)`,
-  height: '24px',
-}))
 const rootEl = ref<HTMLElement | null>(null)
 const menuOpen = ref(false)
 
@@ -93,20 +65,17 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
 </script>
 
 <template>
-  <div ref="rootEl" class="group flow-node-shell relative">
+  <div ref="rootEl" class="flow-node-shell relative w-[260px] pb-14">
     <Handle
       v-if="nodeType !== 'trigger'"
       type="target"
       :position="Position.Top"
-      class="!h-0 !w-0 !border-0 !bg-transparent"
+      class="!h-px !min-h-0 !w-px !min-w-0 !border-0 !bg-transparent"
     />
-    <div
-      v-if="isConnectorNode"
-      class="flow-node flex min-w-[92px] justify-center"
-      :class="selected && 'rounded-xl ring-4 ring-primary/20'"
-    >
+    <div v-if="isConnectorNode" class="flow-node flex justify-center">
       <div
-        class="rounded-lg border-2 border-slate-700 bg-background px-4 py-1.5 text-sm font-medium text-foreground shadow-sm"
+        class="rounded-full bg-[#3b82f6] px-4 py-1.5 text-sm font-medium text-white shadow-sm"
+        :class="selected && 'ring-4 ring-sky-500/25'"
       >
         {{ title }}
       </div>
@@ -114,12 +83,10 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
     <Card
       v-else
       :class="[
-        'flow-node group w-[226px] overflow-hidden border-2 bg-card shadow-md shadow-slate-950/8 transition-[box-shadow,transform] duration-200',
-        editable &&
-          'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-950/12',
-        selected && 'shadow-xl ring-4 ring-primary/20',
+        'flow-node w-full border-slate-200/90 bg-white py-0 shadow-md shadow-slate-900/[0.06]',
+        editable && 'cursor-pointer transition-shadow duration-200 hover:shadow-lg',
+        selected && 'ring-4 ring-sky-500/15',
       ]"
-      :style="{ borderColor: config.color }"
       :role="editable ? 'button' : undefined"
       :tabindex="editable ? 0 : -1"
       :aria-label="editable ? `${config.label}: ${title}` : undefined"
@@ -128,40 +95,40 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
       @keydown.space.prevent="activate"
       @keydown.esc.prevent="closeMenu"
     >
-      <div class="flex items-center gap-2.5 border-b bg-muted/20 px-3 py-2.5">
+      <div class="flex items-start gap-2.5 px-3.5 py-3">
         <span
-          class="grid size-7 shrink-0 place-items-center rounded-md text-white shadow-sm"
+          class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md text-white shadow-sm"
           :style="{ backgroundColor: config.color }"
         >
           <component :is="config.icon" :size="14" />
         </span>
-        <span class="min-w-0">
-          <span
-            class="block text-[9px] font-semibold tracking-[0.2em] text-muted-foreground uppercase"
-          >
-            {{ config.label }}
-          </span>
-          <span class="block truncate text-[19px] leading-tight font-semibold text-card-foreground">
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-[15px] leading-5 font-semibold text-slate-900">
             {{ title }}
           </span>
-        </span>
-      </div>
-      <div
-        class="line-clamp-3 min-h-[3.1rem] px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
-      >
-        {{ data.summary }}
-      </div>
-      <div class="flex items-center justify-between border-t bg-muted/10 px-3 py-1.5 text-[10px]">
-        <span class="font-semibold tracking-wide text-muted-foreground uppercase">
-          {{ nodeType === 'trigger' ? 'Start flow' : connectorFooterLabel }}
+          <span class="mt-0.5 line-clamp-2 text-xs leading-4 text-slate-500">
+            {{ data.summary }}
+          </span>
         </span>
       </div>
     </Card>
+    <div
+      class="pointer-events-none absolute bottom-8 left-1/2 h-6 w-0.5 -translate-x-1/2 bg-[#f0a898]"
+      aria-hidden="true"
+    />
+    <button
+      type="button"
+      :data-open="menuOpen ? 'true' : 'false'"
+      class="flow-add-trigger absolute bottom-1 left-1/2 z-30 -translate-x-1/2 border-[#f0a898] bg-white text-slate-700 shadow-sm transition-transform duration-200 ease-out hover:scale-105 focus-visible:scale-105 data-[open=true]:scale-105"
+      aria-label="Add node"
+      @click.stop="toggleMenu"
+    >
+      <Plus :size="14" class="transition-transform duration-200" :class="menuOpen && 'rotate-45'" />
+    </button>
     <transition name="flow-add-menu">
       <div
         v-if="menuOpen"
-        class="absolute left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border/85 bg-background/98 p-1.5 shadow-xl shadow-slate-950/10 backdrop-blur"
-        :style="addMenuStyle"
+        class="flow-add-menu absolute bottom-0 left-[calc(50%+1.35rem)] z-40 flex items-center gap-1 rounded-2xl border border-border/85 bg-background/98 p-1.5 shadow-xl shadow-slate-950/10 backdrop-blur"
       >
         <button
           type="button"
@@ -190,28 +157,10 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
         </button>
       </div>
     </transition>
-    <div
-      class="pointer-events-none absolute left-1/2 z-20 w-3 -translate-x-1/2 bg-background/95"
-      :style="addStemStyle"
-    >
-      <div class="mx-auto h-full w-0 border-l-2 border-dashed border-slate-400/95" />
-    </div>
-    <button
-      type="button"
-      :data-open="menuOpen ? 'true' : 'false'"
-      class="flow-add-trigger absolute left-1/2 z-30 -translate-x-1/2 rounded-full border-2 border-foreground/80 bg-background text-foreground shadow-md transition-all duration-200 ease-out hover:scale-105 focus-visible:scale-105 data-[open=true]:scale-105"
-      :style="addTriggerStyle"
-      aria-label="Add node"
-      @click.stop="toggleMenu"
-    >
-      <Plus :size="14" />
-    </button>
-
-    <div
-      v-if="!data.hasChildren"
-      class="pointer-events-none absolute left-1/2 w-px -translate-x-1/2 bg-slate-300/90"
-      :style="addContinuationStyle"
+    <Handle
+      type="source"
+      :position="Position.Bottom"
+      class="!bottom-1 !h-px !min-h-0 !w-px !min-w-0 !border-0 !bg-transparent"
     />
-    <Handle type="source" :position="Position.Bottom" class="!h-0 !w-0 !border-0 !bg-transparent" />
   </div>
 </template>

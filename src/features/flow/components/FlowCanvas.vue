@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { VueFlow } from '@vue-flow/core'
-import { computed, nextTick, ref } from 'vue'
+import { useVueFlow, VueFlow } from '@vue-flow/core'
+import { computed, defineComponent, nextTick, ref } from 'vue'
 
 import type { Position as NodePosition, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
@@ -10,12 +10,38 @@ import { useFlowUiStore } from '@/stores/flowUi'
 import { buildFlowEdges, buildFlowNodes } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
 
+const ViewportBridge = defineComponent({
+  name: 'ViewportBridge',
+  setup(_, { expose }) {
+    const { findNode, getViewport, setCenter } = useVueFlow()
+    async function centerOnNode(nodeId: string | number) {
+      await nextTick()
+      let node = findNode(String(nodeId))
+      if (!node?.dimensions?.width) {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+        node = findNode(String(nodeId))
+      }
+      if (!node) return
+      const width = node.dimensions?.width || 260
+      const height = node.dimensions?.height || 140
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+        zoom: getViewport().zoom,
+        duration: reduceMotion ? 0 : 280,
+      })
+    }
+    expose({ revealNode: centerOnNode })
+    return () => null
+  },
+})
+
 const props = defineProps<{ records: NodeRecord[] }>()
 const emit = defineEmits<{
   'open-node': [nodeId: string]
   'create-node': [parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours']
 }>()
 const store = useFlowUiStore()
+const bridge = ref<{ revealNode: (nodeId: string | number) => Promise<void> } | null>(null)
 const dragStart = ref<{ nodeId: string; position: NodePosition } | null>(null)
 
 const nodes = computed(() =>
@@ -54,7 +80,10 @@ async function focusNode(nodeId: string | number) {
   await nextTick()
   document.querySelector(`[data-id="${CSS.escape(String(nodeId))}"] .flow-node`)?.focus()
 }
-defineExpose({ focusNode })
+async function revealNode(nodeId: string | number) {
+  await bridge.value?.revealNode(nodeId)
+}
+defineExpose({ focusNode, revealNode })
 </script>
 
 <template>
@@ -71,8 +100,9 @@ defineExpose({ focusNode })
     @node-drag-start="onDragStart"
     @node-drag-stop="onDragStop"
   >
+    <ViewportBridge ref="bridge" />
     <Background :gap="20" pattern-color="oklch(0.88 0.01 255)" :size="1" />
-    <Controls />
+    <Controls position="bottom-right" />
     <template #node-trigger="slotProps"
       ><BaseFlowNode v-bind="slotProps" node-type="trigger"
     /></template>

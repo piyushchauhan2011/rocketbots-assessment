@@ -76,7 +76,7 @@ describe('graph utilities', () => {
     expect(getNodeSummary(canonical[0])).toBe('Conversation opened')
     expect(getNodeSummary(canonical[3])).toBe('Welcome')
     expect(getNodeSummary({ type: 'addComment', data: { comment: 'Note' } })).toBe('Note')
-    expect(getNodeSummary(canonical[1])).toBe('UTC business hours')
+    expect(getNodeSummary(canonical[1])).toBe('Business hours - UTC')
     expect(getNodeSummary(canonical[2])).toBe('success path')
     expect(getNodeSummary({ name: 'Custom', data: { description: 'Explicit' } })).toBe('Explicit')
   })
