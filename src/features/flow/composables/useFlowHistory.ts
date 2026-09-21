@@ -20,25 +20,31 @@ export function useFlowHistory() {
     await updateMutation.mutateAsync(record)
   }
   async function undo() {
-    if (!canUndo.value) return
+    if (!canUndo.value) return null
     const command = store.takeUndo()
+    if (!command) return null
     try {
       await apply(command, 'before')
+      return command
     } catch (error) {
       store.redoStack.pop()
       store.undoStack.push(command)
       toast.error((error as Error).message)
+      return null
     }
   }
   async function redo() {
-    if (!canRedo.value) return
+    if (!canRedo.value) return null
     const command = store.takeRedo()
+    if (!command) return null
     try {
       await apply(command, 'after')
+      return command
     } catch (error) {
       store.undoStack.pop()
       store.redoStack.push(command)
       toast.error((error as Error).message)
+      return null
     }
   }
   return { canUndo, canRedo, undo, redo }

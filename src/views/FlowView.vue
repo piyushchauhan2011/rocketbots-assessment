@@ -10,12 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import { layoutGraph, spliceNodes } from '@/features/flow/lib/graph'
+import {
+  missingLayoutPositions,
+  positionsForAddedNodes,
+  spliceNodes,
+} from '@/features/flow/lib/graph'
 import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
 import CreateNodeDialog from '@/features/nodes/components/CreateNodeDialog.vue'
 import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords, type NodeDraft } from '@/features/nodes/lib/createNodeRecords'
-import type { NodeRecord } from '@/features/nodes/lib/types'
+import type { FlowNodeCommand, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 const route = useRoute()
@@ -25,7 +29,21 @@ const canvasElement = ref(null)
 const createParentId = ref<string | null>(null)
 const store = useFlowUiStore()
 const { canUndo, canRedo, undo, redo } = useFlowHistory()
-useFlowShortcuts({ undo, redo })
+
+async function runHistory(action: () => Promise<FlowNodeCommand | null>) {
+  const command = await action()
+  if (command?.kind !== 'move') return
+  store.focusNode(command.nodeId)
+  await canvas.value?.focusNode(command.nodeId)
+  await canvas.value?.revealNode(command.nodeId)
+}
+function undoHistory() {
+  return runHistory(undo)
+}
+function redoHistory() {
+  return runHistory(redo)
+}
+useFlowShortcuts({ undo: undoHistory, redo: redoHistory })
 const query = useNodesQuery()
 const replaceMutation = useReplaceNodesMutation()
 const records = computed<NodeRecord[]>(() => query.data.value || [])
@@ -64,9 +82,10 @@ async function createNode(
   draft?: NodeDraft,
 ) {
   const created = createNodeRecords(parentId, type, draft)
-  const next = spliceNodes(records.value, parentId, created)
   const previous = { ...store.positions }
-  store.setPositions(layoutGraph(next))
+  store.setPositions(missingLayoutPositions(records.value, store.positions))
+  const next = spliceNodes(records.value, parentId, created)
+  store.setPositions(positionsForAddedNodes(next, store.positions))
   try {
     await replaceMutation.mutateAsync(next)
     closeCreate()
@@ -92,10 +111,10 @@ function submitCreate(draft: NodeDraft & { type: 'sendMessage' | 'addComment' | 
     <div
       class="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-lg bg-background/85 p-1.5 shadow-md backdrop-blur"
     >
-      <Button variant="ghost" size="icon" aria-label="Undo" :disabled="!canUndo" @click="undo">
+      <Button variant="ghost" size="icon" aria-label="Undo" :disabled="!canUndo" @click="undoHistory">
         <Undo2 />
       </Button>
-      <Button variant="ghost" size="icon" aria-label="Redo" :disabled="!canRedo" @click="redo">
+      <Button variant="ghost" size="icon" aria-label="Redo" :disabled="!canRedo" @click="redoHistory">
         <Redo2 />
       </Button>
     </div>
@@ -103,8 +122,12 @@ function submitCreate(draft: NodeDraft & { type: 'sendMessage' | 'addComment' | 
       ref="canvasElement"
       class="relative h-full min-h-0 overflow-hidden bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
       aria-label="Flow chart canvas"
+      aria-describedby="flow-keyboard-help"
       tabindex="-1"
     >
+      <p id="flow-keyboard-help" class="sr-only">
+        Arrow keys move between steps. Enter opens the selected step.
+      </p>
       <FlowCanvas
         v-if="query.isSuccess.value && records.length"
         ref="canvas"

@@ -5,6 +5,7 @@ import { computed } from 'vue'
 
 import { Card } from '@/components/ui/card'
 import type { NodeRecord } from '@/features/nodes/lib/types'
+import { useFlowUiStore } from '@/stores/flowUi'
 
 defineOptions({ inheritAttrs: false })
 
@@ -16,6 +17,7 @@ const props = defineProps<{
     hasChildren: boolean
     onOpen?: (nodeId: string) => void
     onAdd?: (parentId: string) => void
+    onMove?: (nodeId: string, direction: 'up' | 'down' | 'left' | 'right') => void
   }
   selected: boolean
   nodeType: string
@@ -39,12 +41,28 @@ const editable = computed(() => !['trigger', 'dateTimeConnector'].includes(props
 const isConnectorNode = computed(() => props.nodeType === 'dateTimeConnector')
 const title = computed(() => props.data.record.name || config.value.label)
 const canAdd = computed(() => props.nodeType !== 'businessHours')
+const store = useFlowUiStore()
+const highlighted = computed(() => props.selected || store.focusedNodeId === props.id)
+const tabStop = computed(
+  () => store.focusedNodeId === props.id || (!store.focusedNodeId && props.nodeType === 'trigger'),
+)
+const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' } as const
 
 function activate() {
   if (editable.value) props.data.onOpen?.(props.id)
 }
 function requestCreate() {
   props.data.onAdd?.(props.id)
+}
+function rememberFocus() {
+  if (store.focusedNodeId !== props.id) store.focusNode(props.id)
+}
+function onArrows(event: KeyboardEvent) {
+  const direction = arrows[event.key as keyof typeof arrows]
+  if (!direction) return
+  event.preventDefault()
+  event.stopPropagation()
+  props.data.onMove?.(props.id, direction)
 }
 </script>
 
@@ -56,11 +74,16 @@ function requestCreate() {
       :position="Position.Top"
       class="!h-px !min-h-0 !w-px !min-w-0 !border-0 !bg-transparent"
     />
-    <div v-if="isConnectorNode" class="flow-node flex justify-center">
-      <div
-        class="rounded-full bg-[#3b82f6] px-4 py-1.5 text-sm font-medium text-white shadow-sm"
-        :class="selected && 'ring-4 ring-sky-500/25'"
-      >
+    <div
+      v-if="isConnectorNode"
+      class="flow-node flex justify-center rounded-full focus-visible:outline-none"
+      :tabindex="tabStop ? 0 : -1"
+      :aria-label="`${title} connector`"
+      :class="highlighted && 'ring-4 ring-sky-500/25'"
+      @focus="rememberFocus"
+      @keydown="onArrows"
+    >
+      <div class="rounded-full bg-[#3b82f6] px-4 py-1.5 text-sm font-medium text-white shadow-sm">
         {{ title }}
       </div>
     </div>
@@ -69,12 +92,14 @@ function requestCreate() {
       :class="[
         'flow-node w-full border-slate-200/90 bg-white py-0 shadow-md shadow-slate-900/[0.06]',
         editable && 'cursor-pointer transition-shadow duration-200 hover:shadow-lg',
-        selected && 'ring-4 ring-sky-500/15',
+        highlighted && 'ring-4 ring-sky-500/15',
       ]"
       :role="editable ? 'button' : undefined"
-      :tabindex="editable ? 0 : -1"
-      :aria-label="editable ? `${config.label}: ${title}` : undefined"
-      @dblclick="activate"
+      :tabindex="tabStop ? 0 : -1"
+      :aria-label="editable ? `${config.label}: ${title}` : config.label"
+      :aria-current="highlighted ? 'true' : undefined"
+      @focus="rememberFocus"
+      @keydown="onArrows"
       @keydown.enter.prevent="activate"
       @keydown.space.prevent="activate"
     >

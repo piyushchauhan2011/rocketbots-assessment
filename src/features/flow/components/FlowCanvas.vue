@@ -2,18 +2,29 @@
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
-import { computed, defineComponent, nextTick, ref } from 'vue'
+import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 
 import type { Position as NodePosition, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
-import { buildFlowEdges, buildFlowNodes } from '../lib/graph'
+import { buildFlowEdges, buildFlowNodes, nextNodeId } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
 
 const ViewportBridge = defineComponent({
   name: 'ViewportBridge',
   setup(_, { expose }) {
-    const { findNode, getViewport, setCenter } = useVueFlow()
+    const { findNode, getViewport, setCenter, updateNode } = useVueFlow()
+    const store = useFlowUiStore()
+    watch(
+      () => store.positions,
+      (positions) => {
+        Object.entries(positions).forEach(([nodeId, position]) => {
+          const node = findNode(nodeId)
+          if (!node || (node.position.x === position.x && node.position.y === position.y)) return
+          updateNode(nodeId, { position: { ...position } })
+        })
+      },
+    )
     async function centerOnNode(nodeId: string | number) {
       await nextTick()
       let node = findNode(String(nodeId))
@@ -51,6 +62,7 @@ const nodes = computed(() =>
       ...node.data,
       onOpen: openNode,
       onAdd: (parentId: string) => emit('add-node', parentId),
+      onMove: moveSelection,
     },
   })),
 )
@@ -60,8 +72,16 @@ function openNode(nodeId: string) {
   store.focusNode(nodeId)
   emit('open-node', nodeId)
 }
+function moveSelection(nodeId: string, direction: 'up' | 'down' | 'left' | 'right') {
+  const next = nextNodeId(props.records, nodeId, direction)
+  if (!next) return
+  store.focusNode(next)
+  void focusNode(next)
+}
 function onNodeClick({ node }: { node: { selectable?: boolean; id: string } }) {
-  if (node.selectable !== false) openNode(node.id)
+  store.focusNode(node.id)
+  void focusNode(node.id)
+  if (node.selectable !== false) emit('open-node', node.id)
 }
 function onDragStart({ node }: { node: { id: string; position: NodePosition } }) {
   dragStart.value = { nodeId: node.id, position: { ...node.position } }

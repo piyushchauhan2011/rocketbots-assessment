@@ -6,8 +6,13 @@ import {
   getDescendantIds,
   getNodeSummary,
   layoutGraph,
+  missingLayoutPositions,
+  nextNodeId,
+  positionsForAddedNodes,
   removeNode,
   spliceNodes,
+  X_GAP,
+  Y_GAP,
 } from '@/features/flow/lib/graph'
 
 const canonical = [
@@ -59,7 +64,9 @@ describe('graph utilities', () => {
     expect(positions.hours.y).toBeGreaterThan(positions['1'].y)
     const nodes = buildFlowNodes(canonical, { message: { x: 9, y: 11 } })
     expect(nodes.find((node) => node.id === 'message').position).toEqual({ x: 9, y: 11 })
-    expect(nodes.find((node) => node.id === '1').draggable).toBe(false)
+    expect(nodes.find((node) => node.id === '1').draggable).toBe(true)
+    expect(nodes.find((node) => node.id === 'success').draggable).toBe(true)
+    expect(nodes.find((node) => node.id === 'success').selectable).toBe(false)
     expect(nodes.find((node) => node.id === 'hours').type).toBe('businessHours')
   })
 
@@ -84,6 +91,28 @@ describe('graph utilities', () => {
   })
 })
 
+describe('nextNodeId', () => {
+  const branched = [
+    ...canonical,
+    {
+      id: 'failure',
+      parentId: 'hours',
+      type: 'dateTimeConnector',
+      data: { connectorType: 'failure' },
+    },
+  ]
+
+  it('walks parent, child, and sibling relationships', () => {
+    expect(nextNodeId(branched, null, 'down')).toBe('1')
+    expect(nextNodeId(branched, '1', 'down')).toBe('hours')
+    expect(nextNodeId(branched, 'hours', 'down')).toBe('success')
+    expect(nextNodeId(branched, 'success', 'right')).toBe('failure')
+    expect(nextNodeId(branched, 'failure', 'left')).toBe('success')
+    expect(nextNodeId(branched, 'message', 'up')).toBe('success')
+    expect(nextNodeId(branched, '1', 'up')).toBeNull()
+  })
+})
+
 describe('removeNode', () => {
   it('reconnects the child to the deleted step parent', () => {
     const withMid = spliceNodes(canonical, 'success', [
@@ -100,6 +129,41 @@ describe('removeNode', () => {
     expect(next.removedIds).toEqual(['hours', 'success'])
     expect(next.records.map((node) => node.id)).toEqual([1, 'message'])
     expect(next.records.find((node) => node.id === 'message')?.parentId).toBe(1)
+  })
+})
+
+describe('positionsForAddedNodes', () => {
+  it('fills only missing layout positions', () => {
+    const layout = layoutGraph(canonical)
+    const missing = missingLayoutPositions(canonical, { message: { x: 9, y: 11 } })
+    expect(missing.message).toBeUndefined()
+    expect(missing['1']).toEqual(layout['1'])
+  })
+
+  it('places a new node from its parent and leaves saved nodes alone', () => {
+    const saved = layoutGraph(canonical)
+    const records = [
+      ...canonical,
+      { id: 'note', parentId: 'success', type: 'addComment', name: 'Note', data: {} },
+    ]
+    const added = positionsForAddedNodes(records, saved)
+    expect(Object.keys(added)).toEqual(['note'])
+    expect(added.note.y).toBe(saved.message.y)
+    expect(added.note.x).not.toBe(saved.message.x)
+  })
+
+  it('shifts a new node aside when its slot is already taken', () => {
+    const records = [
+      { id: '1', parentId: -1, type: 'trigger', data: {} },
+      { id: 'inserted', parentId: '1', type: 'addComment', data: {} },
+      { id: 'child', parentId: 'inserted', type: 'sendMessage', data: {} },
+    ]
+    const added = positionsForAddedNodes(records, {
+      1: { x: 0, y: 0 },
+      child: { x: 0, y: Y_GAP },
+    })
+    expect(added.inserted).toEqual({ x: X_GAP, y: Y_GAP })
+    expect(added.child).toBeUndefined()
   })
 })
 

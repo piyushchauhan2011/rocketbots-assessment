@@ -128,6 +128,109 @@ export function removeNode(records: NodeRecord[], nodeId: string | number) {
   return { records: next, removedIds: [...removed] }
 }
 
+function siblingId(records: NodeRecord[], current: NodeRecord, step: number) {
+  const siblings = records.filter((record) => id(record.parentId) === id(current.parentId))
+  const index = siblings.findIndex((record) => id(record.id) === id(current.id))
+  const next = siblings[index + step]
+  return next ? id(next.id) : null
+}
+
+export function nextNodeId(
+  records: NodeRecord[],
+  currentId: string | null,
+  direction: 'up' | 'down' | 'left' | 'right',
+) {
+  if (!currentId) {
+    const root = records.find((record) => record.type === 'trigger') || records[0]
+    return root ? id(root.id) : null
+  }
+  const current = records.find((record) => id(record.id) === id(currentId))
+  if (!current) return null
+  if (direction === 'down') {
+    const child = records.find((record) => id(record.parentId) === id(current.id))
+    return child ? id(child.id) : null
+  }
+  if (direction === 'up') {
+    const parent = id(current.parentId)
+    return records.some((record) => id(record.id) === parent) ? parent : null
+  }
+  return siblingId(records, current, direction === 'left' ? -1 : 1)
+}
+
+function point(position: Position): Position {
+  return { x: position.x, y: position.y }
+}
+
+function overlaps(position: Position, placed: Record<string, Position>) {
+  return Object.values(placed).some(
+    (current) => Math.abs(current.x - position.x) < 8 && Math.abs(current.y - position.y) < 8,
+  )
+}
+
+function clearPosition(position: Position, placed: Record<string, Position>) {
+  let next = point(position)
+  for (let shift = 0; overlaps(next, placed) && shift < 8; shift += 1) {
+    next = { x: position.x + (shift + 1) * X_GAP, y: position.y }
+  }
+  return next
+}
+
+export function missingLayoutPositions(
+  records: NodeRecord[],
+  saved: Record<string, Position> = {},
+) {
+  const layout = layoutGraph(records)
+  return Object.fromEntries(
+    records.flatMap((record) => {
+      const nodeId = id(record.id)
+      return saved[nodeId] || !layout[nodeId] ? [] : [[nodeId, point(layout[nodeId])]]
+    }),
+  )
+}
+
+function addedPosition(
+  record: NodeRecord,
+  layout: Record<string, Position>,
+  placed: Record<string, Position>,
+) {
+  const nodeId = id(record.id)
+  const parentId = id(record.parentId)
+  const layoutPos = layout[nodeId]
+  const parentLayout = layout[parentId]
+  const parentPos = placed[parentId]
+  const anchored =
+    parentPos && parentLayout
+      ? {
+          x: parentPos.x + layoutPos.x - parentLayout.x,
+          y: parentPos.y + layoutPos.y - parentLayout.y,
+        }
+      : point(layoutPos)
+  return clearPosition(anchored, placed)
+}
+
+export function positionsForAddedNodes(
+  records: NodeRecord[],
+  saved: Record<string, Position> = {},
+) {
+  const layout = layoutGraph(records)
+  const placed = { ...saved }
+  const added: Record<string, Position> = {}
+  const pending = records
+    .filter((record) => !placed[id(record.id)] && layout[id(record.id)])
+    .sort(
+      (left, right) =>
+        layout[id(left.id)].y - layout[id(right.id)].y ||
+        layout[id(left.id)].x - layout[id(right.id)].x,
+    )
+  pending.forEach((record) => {
+    const nodeId = id(record.id)
+    const position = addedPosition(record, layout, placed)
+    placed[nodeId] = position
+    added[nodeId] = position
+  })
+  return added
+}
+
 export function spliceNodes(records: NodeRecord[], parentId: string, created: NodeRecord[]) {
   const anchorId = created.length === 3 ? created[1].id : created[0].id
   const parent = id(parentId)
@@ -161,8 +264,8 @@ export function buildFlowNodes(
         hasChildren: (parentCounts.get(nodeId) || 0) > 0,
       },
       selectable: !displayOnly,
-      draggable: !displayOnly,
-      focusable: !displayOnly,
+      draggable: true,
+      focusable: false,
     }
   })
 }

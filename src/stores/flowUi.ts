@@ -5,6 +5,22 @@ import type { FlowNodeCommand, Position } from '@/features/nodes/lib/types'
 export const POSITIONS_STORAGE_KEY = 'rocketbots-flow-positions:v2'
 const HISTORY_LIMIT = 50
 
+function point(position: Partial<Position> | undefined): Position {
+  return { x: Number(position?.x) || 0, y: Number(position?.y) || 0 }
+}
+
+function cloneCommand(command: FlowNodeCommand): FlowNodeCommand {
+  if (command.kind === 'move') {
+    return {
+      kind: 'move',
+      nodeId: String(command.nodeId),
+      before: point(command.before),
+      after: point(command.after),
+    }
+  }
+  return JSON.parse(JSON.stringify(command)) as FlowNodeCommand
+}
+
 function loadPositions(): Record<string, Position> {
   try {
     return JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}') as Record<
@@ -42,7 +58,7 @@ export const useFlowUiStore = defineStore('flow-ui', {
       this.focusedNodeId = nodeId === null ? null : String(nodeId)
     },
     record(command: FlowNodeCommand) {
-      this.undoStack = [...this.undoStack.slice(-(HISTORY_LIMIT - 1)), structuredClone(command)]
+      this.undoStack = [...this.undoStack.slice(-(HISTORY_LIMIT - 1)), cloneCommand(command)]
       this.redoStack = []
     },
     takeUndo() {

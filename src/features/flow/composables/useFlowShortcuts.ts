@@ -16,7 +16,7 @@ export function useFlowShortcuts({ undo, redo }: { undo: () => void; redo: () =>
     } else if (key === 'z') {
       event.preventDefault()
       undo()
-    } else if (key === 'y' && event.ctrlKey) {
+    } else if (key === 'y') {
       event.preventDefault()
       redo()
     }

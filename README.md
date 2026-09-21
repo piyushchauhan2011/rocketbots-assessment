@@ -67,11 +67,12 @@ duplicate ID, and storage quota failures are surfaced in the UI and optimistic m
 - Images: JPEG/PNG/WebP/GIF, maximum four files, 750 KiB each, and 3 MiB total encoded local data. Images persist as data URLs because no upload API is supplied.
 - Comments are 1–1000 trimmed characters.
 - Business Hours require seven unique weekdays, `HH:mm` values, and start before end. Supported timezones are UTC, Asia/Kuala_Lumpur, and the current browser IANA timezone when distinct.
-- Delete removes only the selected step and reconnects the nodes below it to the step above. Deleting Business Hours also removes its Success and Failure connectors, and the nodes on those paths stay in the flow. Trigger and connector records are display-only.
+- Delete removes only the selected step and reconnects the nodes below it to the step above. Deleting Business Hours also removes its Success and Failure connectors, and the nodes on those paths stay in the flow. Trigger, Success, and Failure can be dragged; they do not open the details drawer.
+- Adding or deleting a step keeps every existing node where you placed it. The new step is positioned from its parent.
 
 ## Accessibility and history
 
-Editable cards are keyboard-focusable buttons with visible focus rings. Enter or Space opens details. `Cmd/Ctrl+Z` undoes; `Cmd/Ctrl+Shift+Z` and `Ctrl+Y` redo. Shortcuts are ignored in form controls and dialogs so native text undo remains available. History stores up to 50 move/update commands; create/delete are intentionally excluded because subtree and attachment restoration would require snapshot history.
+Arrow keys move a visible selection through the flow, including Trigger and the Success and Failure connectors. Enter or Space opens the details drawer for a message, comment, or business-hours step. `Cmd/Ctrl+Z` undoes a move or a saved edit; `Cmd/Ctrl+Shift+Z` and `Cmd/Ctrl+Y` redo it, and the undone node is brought back into view. Shortcuts are ignored in form controls and dialogs so native text undo remains available. History stores up to 50 move and edit commands. Create and delete are not part of that history.
 
 ## Testing and CI
 

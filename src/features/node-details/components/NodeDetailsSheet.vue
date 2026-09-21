@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getNodeSummary, layoutGraph, removeNode } from '@/features/flow/lib/graph'
+import { getNodeSummary, missingLayoutPositions, removeNode } from '@/features/flow/lib/graph'
 import {
   useReplaceNodesMutation,
   useUpdateNodeMutation,
@@ -150,6 +150,11 @@ function resetDraft() {
   originalDraft.value = JSON.stringify(draft.value)
 }
 
+watch(open, (isOpen) => {
+  if (!isOpen) return
+  nextTick(() => document.getElementById('node-title')?.focus())
+})
+
 watch(
   [record, open],
   () => {
@@ -219,10 +224,10 @@ async function deleteNode() {
   confirmMode.value = 'leaving'
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
+  store.setPositions(missingLayoutPositions(props.records, store.positions))
   try {
     await replaceMutation.mutateAsync(next.records)
     store.removePositions(next.removedIds)
-    store.setPositions(layoutGraph(next.records))
     toast.success(`${name} deleted`)
   } catch (error) {
     toast.error((error as Error).message)
