@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import { layoutGraph } from '@/features/flow/lib/graph'
+import { X_GAP, Y_GAP, layoutGraph } from '@/features/flow/lib/graph'
 import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
 import { useCreateNodeMutation, useNodesQuery } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
@@ -46,11 +46,11 @@ function getCreatePositions(
   const fallback = layoutGraph(existing)
   const parentPosition = store.positions[parentId] || fallback[parentId] || { x: 0, y: 0 }
   const root = created[0]
-  const base = { x: parentPosition.x, y: parentPosition.y + 190 }
+  const base = { x: parentPosition.x, y: parentPosition.y + Y_GAP }
   const next: Record<string, Position> = { [String(root.id)]: base }
   if (created.length === 3) {
-    next[String(created[1].id)] = { x: base.x - 140, y: base.y + 190 }
-    next[String(created[2].id)] = { x: base.x + 140, y: base.y + 190 }
+    next[String(created[1].id)] = { x: base.x - X_GAP / 2, y: base.y + Y_GAP }
+    next[String(created[2].id)] = { x: base.x + X_GAP / 2, y: base.y + Y_GAP }
   }
   return next
 }
@@ -122,10 +122,12 @@ async function createNode(parentId: string, type: 'sendMessage' | 'addComment' |
         <Card class="w-full max-w-md text-center shadow-xl shadow-slate-950/5">
           <CardHeader>
             <CardTitle>Your flow is empty</CardTitle>
-            <CardDescription>Create the first node to start your automation.</CardDescription>
+            <CardDescription>
+              We couldn’t find nodes in local storage or the payload response.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button @click="createOpen = true"><Plus /> Create New Node</Button>
+            <Button variant="outline" @click="query.refetch()"><RotateCcw /> Reload flow</Button>
           </CardContent>
         </Card>
       </div>

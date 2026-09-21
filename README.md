@@ -61,7 +61,7 @@ duplicate ID, and storage quota failures are surfaced in the UI and optimistic m
 
 ## Editing rules
 
-- Creation is inline on the canvas via per-node branch controls (`+ Message`, `+ Comment`, `+ Hours`).
+- Creation is inline on the canvas via a hover/focus circular add control that expands to Message/Comment/Hours actions.
 - Titles are required and limited to 80 characters; descriptions are required and limited to 240.
 - Send Message must contain non-empty text or an attachment before save.
 - Images: JPEG/PNG/WebP/GIF, maximum four files, 750 KiB each, and 3 MiB total encoded local data. Images persist as data URLs because no upload API is supplied.

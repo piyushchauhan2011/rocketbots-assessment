@@ -59,7 +59,7 @@ defineExpose({ focusNode })
 
 <template>
   <VueFlow
-    class="h-full w-full bg-[radial-gradient(circle_at_top_left,oklch(0.95_0.035_260),transparent_40%)]"
+    class="h-full w-full bg-muted/20"
     :nodes="nodes"
     :edges="edges"
     :fit-view-on-init="true"
@@ -71,7 +71,7 @@ defineExpose({ focusNode })
     @node-drag-start="onDragStart"
     @node-drag-stop="onDragStop"
   >
-    <Background :gap="22" pattern-color="oklch(0.78 0.025 255)" :size="1.2" />
+    <Background :gap="20" pattern-color="oklch(0.88 0.01 255)" :size="1" />
     <Controls />
     <template #node-trigger="slotProps"
       ><BaseFlowNode v-bind="slotProps" node-type="trigger"

@@ -189,92 +189,101 @@ async function deleteNode() {
 </script>
 
 <template>
-  <div v-if="open" class="fixed inset-0 z-40">
-    <button
-      class="absolute inset-0 bg-black/35"
-      aria-label="Dismiss details overlay"
-      @click="requestClose"
-    />
-    <aside
-      class="sheet absolute top-0 right-0 flex h-full w-full max-w-[440px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"
-      tabindex="-1"
-      @keydown.escape.prevent="requestClose"
-    >
+  <div class="pointer-events-none fixed inset-0 z-40">
+    <Transition name="flow-sheet-backdrop">
       <button
-        aria-label="Close details"
-        class="absolute top-4 right-4 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+        v-if="open"
+        class="pointer-events-auto absolute inset-0 bg-black/35"
+        aria-label="Dismiss details overlay"
         @click="requestClose"
+      />
+    </Transition>
+    <Transition name="flow-sheet-panel">
+      <aside
+        v-if="open"
+        class="sheet pointer-events-auto absolute top-0 right-0 flex h-full w-full max-w-[440px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"
+        tabindex="-1"
+        @keydown.escape.prevent="requestClose"
       >
-        Close
-      </button>
-      <template v-if="!record">
-        <header class="border-b p-6 pr-12 text-left">
-          <Badge variant="secondary" class="w-fit">Unavailable</Badge>
-          <h2 class="mt-2 text-xl font-semibold">Node not found</h2>
-          <p class="text-sm text-muted-foreground">
-            The requested node does not exist in this flow.
-          </p>
-        </header>
-        <div class="flex-1 p-6" />
-        <footer class="border-t p-4">
-          <Button variant="outline" @click="requestClose">Close</Button>
-        </footer>
-      </template>
-      <template v-else-if="draft">
-        <header class="border-b bg-muted/20 p-6 pr-12 text-left">
-          <Badge variant="secondary" class="w-fit capitalize">{{ record.type }}</Badge>
-          <h2 class="mt-2 truncate text-xl font-semibold">{{ draft.name || 'Untitled node' }}</h2>
-          <p class="text-sm text-muted-foreground">Edit this node’s content and behavior.</p>
-        </header>
-        <div class="min-h-0 flex-1 overflow-y-auto">
-          <div class="p-6">
-            <div class="grid gap-5">
-              <div class="grid gap-2">
-                <Label for="node-title">Title</Label>
-                <Input id="node-title" v-model="draft.name" maxlength="80" />
-              </div>
-              <div class="grid gap-2">
-                <Label for="node-description">Description</Label>
-                <Textarea
-                  id="node-description"
-                  v-model="draft.data.description"
-                  maxlength="240"
-                  class="min-h-24 resize-y"
-                />
-              </div>
-            </div>
-            <SendMessageEditor v-if="record.type === 'sendMessage'" v-model="draft.data.payload" />
-            <AddCommentEditor
-              v-else-if="record.type === 'addComment'"
-              v-model="draft.data.comment"
-            />
-            <BusinessHoursEditor
-              v-else-if="record.type === 'dateTime'"
-              v-model:times="draft.data.times"
-              v-model:timezone="draft.data.timezone"
-            />
-            <p
-              v-if="validationError"
-              class="mt-4 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
-              role="alert"
-            >
-              {{ validationError }}
+        <button
+          aria-label="Close details"
+          class="absolute top-4 right-4 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+          @click="requestClose"
+        >
+          Close
+        </button>
+        <template v-if="!record">
+          <header class="border-b p-6 pr-12 text-left">
+            <Badge variant="secondary" class="w-fit">Unavailable</Badge>
+            <h2 class="mt-2 text-xl font-semibold">Node not found</h2>
+            <p class="text-sm text-muted-foreground">
+              The requested node does not exist in this flow.
             </p>
+          </header>
+          <div class="flex-1 p-6" />
+          <footer class="border-t p-4">
+            <Button variant="outline" @click="requestClose">Close</Button>
+          </footer>
+        </template>
+        <template v-else-if="draft">
+          <header class="border-b bg-muted/20 p-6 pr-12 text-left">
+            <Badge variant="secondary" class="w-fit capitalize">{{ record.type }}</Badge>
+            <h2 class="mt-2 truncate text-xl font-semibold">{{ draft.name || 'Untitled node' }}</h2>
+            <p class="text-sm text-muted-foreground">Edit this node’s content and behavior.</p>
+          </header>
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <div class="p-6">
+              <div class="grid gap-5">
+                <div class="grid gap-2">
+                  <Label for="node-title">Title</Label>
+                  <Input id="node-title" v-model="draft.name" maxlength="80" />
+                </div>
+                <div class="grid gap-2">
+                  <Label for="node-description">Description</Label>
+                  <Textarea
+                    id="node-description"
+                    v-model="draft.data.description"
+                    maxlength="240"
+                    class="min-h-24 resize-y"
+                  />
+                </div>
+              </div>
+              <SendMessageEditor
+                v-if="record.type === 'sendMessage'"
+                v-model="draft.data.payload"
+              />
+              <AddCommentEditor
+                v-else-if="record.type === 'addComment'"
+                v-model="draft.data.comment"
+              />
+              <BusinessHoursEditor
+                v-else-if="record.type === 'dateTime'"
+                v-model:times="draft.data.times"
+                v-model:timezone="draft.data.timezone"
+              />
+              <p
+                v-if="validationError"
+                class="mt-4 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
+                role="alert"
+              >
+                {{ validationError }}
+              </p>
+            </div>
           </div>
-        </div>
-        <footer class="flex flex-row items-center justify-between border-t bg-background p-4">
-          <Button
-            variant="ghost"
-            class="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            :disabled="deleteMutation.isPending.value"
-            @click="requestDelete"
-          >
-            <Trash2 /> Delete
-          </Button>
-          <Button :disabled="!canSave" @click="save"><Save /> Save changes</Button>
-        </footer>
-      </template>
-    </aside>
+          <footer class="flex flex-row items-center justify-between border-t bg-background p-4">
+            <Button
+              variant="ghost"
+              class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              :disabled="deleteMutation.isPending.value"
+              @click="requestDelete"
+            >
+              <Trash2 /> Delete
+            </Button>
+            <Button :disabled="!canSave" @click="save"><Save /> Save changes</Button>
+          </footer>
+        </template>
+      </aside>
+    </Transition>
   </div>
 
   <div

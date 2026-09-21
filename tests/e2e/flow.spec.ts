@@ -35,7 +35,9 @@ test('loads, edits, uploads, persists, and directly opens a message', async ({ p
 
 test('creates and validates business hours with generated connectors', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: '+ Hours' }).first().click()
+  const triggerNode = page.locator('.flow-node-shell').first()
+  await triggerNode.getByRole('button', { name: 'Add node' }).click()
+  await triggerNode.getByRole('button', { name: 'Add Business Hours node' }).click()
   await expect(page.locator('.flow-node')).toHaveCount(10)
   await expect(page.getByText('Business Hours', { exact: true }).last()).toBeVisible()
   await page.getByLabel('End', { exact: true }).first().fill('09:00')

@@ -1,7 +1,7 @@
 import type { NodeRecord, Position } from '@/features/nodes/lib/types'
 
-const X_GAP = 280
-const Y_GAP = 190
+export const X_GAP = 280
+export const Y_GAP = 220
 
 function id(value: unknown): string {
   return String(value)
@@ -105,6 +105,11 @@ export function buildFlowNodes(
   savedPositions: Record<string, Position> = {},
 ) {
   const layout = layoutGraph(records)
+  const parentCounts = new Map<string, number>()
+  records.forEach((record) => {
+    const parentId = id(record.parentId)
+    parentCounts.set(parentId, (parentCounts.get(parentId) || 0) + 1)
+  })
   return records.map((record) => {
     const nodeId = id(record.id)
     const displayOnly = record.type === 'trigger' || record.type === 'dateTimeConnector'
@@ -113,7 +118,11 @@ export function buildFlowNodes(
       id: nodeId,
       type: businessHours ? 'businessHours' : record.type,
       position: savedPositions[nodeId] || layout[nodeId] || { x: 0, y: 0 },
-      data: { record, summary: getNodeSummary(record) },
+      data: {
+        record,
+        summary: getNodeSummary(record),
+        hasChildren: (parentCounts.get(nodeId) || 0) > 0,
+      },
       selectable: !displayOnly,
       draggable: !displayOnly,
       focusable: !displayOnly,
