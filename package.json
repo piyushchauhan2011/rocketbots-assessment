@@ -1,0 +1,51 @@
+{
+  "name": "rocketbots-flow-assessment",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings src tests vite.config.js",
+    "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "latest",
+    "@tanstack/vue-query": "latest",
+    "@vee-validate/zod": "latest",
+    "@vue-flow/background": "latest",
+    "@vue-flow/controls": "latest",
+    "@vue-flow/core": "latest",
+    "@vueuse/core": "^15.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "latest",
+    "pinia": "latest",
+    "reka-ui": "^2.10.4",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "latest",
+    "vee-validate": "latest",
+    "vue": "latest",
+    "vue-router": "latest",
+    "vue-sonner": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@vitejs/plugin-vue": "latest",
+    "@vitest/coverage-v8": "latest",
+    "@vue/test-utils": "latest",
+    "jsdom": "latest",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "shadcn-vue": "^2.8.2",
+    "vite": "latest",
+    "vitest": "latest"
+  },
+  "packageManager": "pnpm@12.4.2"
+}

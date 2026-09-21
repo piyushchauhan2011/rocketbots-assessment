@@ -1,0 +1,7 @@
+{
+  "singleQuote": true,
+  "semi": false,
+  "sortImports": true,
+  "sortTailwindcss": { "stylesheet": "src/assets/main.css" },
+  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results", "pnpm-lock.yaml"]
+}

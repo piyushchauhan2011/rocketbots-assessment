@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": { "correctness": "error", "suspicious": "error", "perf": "error" },
+  "plugins": ["vue", "import"],
+  "rules": {
+    "complexity": ["error", 10],
+    "max-depth": ["error", 3],
+    "max-lines-per-function": ["error", { "max": 60, "skipBlankLines": true, "skipComments": true }]
+  },
+  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results"],
+  "overrides": [
+    { "files": ["src/components/ui/**"], "rules": { "max-lines-per-function": "off" } },
+    { "files": ["src/main.js"], "rules": { "import/no-unassigned-import": "off" } }
+  ]
+}
