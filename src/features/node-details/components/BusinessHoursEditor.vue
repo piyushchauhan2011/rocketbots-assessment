@@ -2,8 +2,9 @@
 import { CalendarDays, Clock3 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import TimeField from '@/components/ui/time-picker/TimeField.vue'
 import type { BusinessHourTime } from '@/features/nodes/lib/types'
 
 const props = defineProps<{ times: BusinessHourTime[]; timezone: string }>()
@@ -43,9 +44,13 @@ function formatTimezone(zone: string) {
   return `(${offset}) ${name}`
 }
 
-function update(index: number, field: 'startTime' | 'endTime', value: string | number | undefined) {
+const timezoneOptions = computed(() =>
+  timezones.value.map((zone) => ({ value: zone, label: formatTimezone(zone) })),
+)
+
+function update(index: number, field: 'startTime' | 'endTime', value: string) {
   const next = props.times.map((time, itemIndex) =>
-    itemIndex === index ? { ...time, [field]: String(value ?? '') } : time,
+    itemIndex === index ? { ...time, [field]: value } : time,
   )
   emit('update:times', next)
 }
@@ -73,20 +78,16 @@ function update(index: number, field: 'startTime' | 'endTime', value: string | n
           {{ labels[time.day] || time.day }}
         </span>
         <div class="flex min-w-0 items-center gap-2">
-          <Input
+          <TimeField
             :id="`start-${time.day}`"
-            type="time"
-            aria-label="Start"
-            class="h-9 min-w-0 flex-1"
+            label="Start"
             :model-value="time.startTime"
             @update:model-value="update(index, 'startTime', $event)"
           />
           <span class="shrink-0 text-sm text-slate-400">to</span>
-          <Input
+          <TimeField
             :id="`end-${time.day}`"
-            type="time"
-            aria-label="End"
-            class="h-9 min-w-0 flex-1"
+            label="End"
             :model-value="time.endTime"
             @update:model-value="update(index, 'endTime', $event)"
           />
@@ -95,16 +96,12 @@ function update(index: number, field: 'startTime' | 'endTime', value: string | n
     </div>
     <div class="grid gap-2">
       <Label for="timezone">Timezone</Label>
-      <select
+      <Select
         id="timezone"
-        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-        :value="timezone"
-        @change="emit('update:timezone', ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="zone in timezones" :key="zone" :value="zone">
-          {{ formatTimezone(zone) }}
-        </option>
-      </select>
+        :model-value="timezone"
+        :options="timezoneOptions"
+        @update:model-value="emit('update:timezone', $event)"
+      />
     </div>
   </section>
 </template>

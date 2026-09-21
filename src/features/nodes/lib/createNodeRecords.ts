@@ -6,49 +6,64 @@ function businessHourTimes() {
   return weekdays.map((day) => ({ day, startTime: '09:00', endTime: '17:00' }))
 }
 
-function createSendMessage(parentId: NodeId): NodeRecord[] {
+export interface NodeDraft {
+  title?: string
+  description?: string
+}
+
+function drafted(fallbackName: string, fallbackDescription: string, draft?: NodeDraft) {
+  return {
+    name: draft?.title?.trim() || fallbackName,
+    description: draft?.description?.trim() || fallbackDescription,
+  }
+}
+
+function createSendMessage(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
+  const content = drafted('New Message', 'Send a message to this path', draft)
   return [
     {
       id: crypto.randomUUID(),
       parentId,
-      name: 'New Message',
+      name: content.name,
       type: 'sendMessage',
       data: {
-        description: 'Send a message to this path',
-        payload: [{ type: 'text', text: '' }],
+        description: content.description,
+        payload: [{ type: 'text', text: content.description }],
       },
     },
   ]
 }
 
-function createComment(parentId: NodeId): NodeRecord[] {
+function createComment(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
+  const content = drafted('New Comment', 'Add an internal note', draft)
   return [
     {
       id: crypto.randomUUID(),
       parentId,
-      name: 'New Comment',
+      name: content.name,
       type: 'addComment',
       data: {
-        description: 'Add an internal note',
-        comment: '',
+        description: content.description,
+        comment: content.description,
       },
     },
   ]
 }
 
-function createBusinessHours(parentId: NodeId): NodeRecord[] {
+function createBusinessHours(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
   const nodeId = crypto.randomUUID()
   const successId = crypto.randomUUID()
   const failureId = crypto.randomUUID()
+  const content = drafted('Business Hours', 'Route by business hours', draft)
   return [
     {
       id: nodeId,
       parentId,
-      name: 'Business Hours',
+      name: content.name,
       type: 'dateTime',
       data: {
         action: 'businessHours',
-        description: 'Route by business hours',
+        description: content.description,
         timezone: 'UTC',
         times: businessHourTimes(),
         connectors: [successId, failureId],
@@ -74,8 +89,9 @@ function createBusinessHours(parentId: NodeId): NodeRecord[] {
 export function createNodeRecords(
   parentId: NodeId,
   type: 'sendMessage' | 'addComment' | 'businessHours',
+  draft?: NodeDraft,
 ): NodeRecord[] {
-  if (type === 'sendMessage') return createSendMessage(parentId)
-  if (type === 'addComment') return createComment(parentId)
-  return createBusinessHours(parentId)
+  if (type === 'sendMessage') return createSendMessage(parentId, draft)
+  if (type === 'addComment') return createComment(parentId, draft)
+  return createBusinessHours(parentId, draft)
 }

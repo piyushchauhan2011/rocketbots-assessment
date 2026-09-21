@@ -104,6 +104,39 @@ export function layoutGraph(records: NodeRecord[]): Record<string, Position> {
   return positions
 }
 
+function removedIdsFor(records: NodeRecord[], target: NodeRecord) {
+  const targetId = id(target.id)
+  const removed = new Set([targetId])
+  if (target.type !== 'dateTime') return removed
+  records.forEach((record) => {
+    if (id(record.parentId) === targetId && record.type === 'dateTimeConnector') {
+      removed.add(id(record.id))
+    }
+  })
+  return removed
+}
+
+export function removeNode(records: NodeRecord[], nodeId: string | number) {
+  const target = records.find((record) => id(record.id) === id(nodeId))
+  if (!target) return { records, removedIds: [] as string[] }
+  const removed = removedIdsFor(records, target)
+  const next = records.flatMap((record) => {
+    if (removed.has(id(record.id))) return []
+    if (!removed.has(id(record.parentId))) return [record]
+    return [{ ...record, parentId: target.parentId }]
+  })
+  return { records: next, removedIds: [...removed] }
+}
+
+export function spliceNodes(records: NodeRecord[], parentId: string, created: NodeRecord[]) {
+  const anchorId = created.length === 3 ? created[1].id : created[0].id
+  const parent = id(parentId)
+  const shifted = records.map((record) =>
+    id(record.parentId) === parent ? { ...record, parentId: anchorId } : record,
+  )
+  return [...shifted, ...created]
+}
+
 export function buildFlowNodes(
   records: NodeRecord[],
   savedPositions: Record<string, Position> = {},

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Redo2, RotateCcw, Undo2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import { Button } from '@/components/ui/button'
@@ -10,25 +10,31 @@ import { Skeleton } from '@/components/ui/skeleton'
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import { getDescendantIds, X_GAP, Y_GAP, layoutGraph } from '@/features/flow/lib/graph'
+import { layoutGraph, spliceNodes } from '@/features/flow/lib/graph'
 import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
-import { useCreateNodeMutation, useNodesQuery } from '@/features/nodes/composables/useNodes'
-import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
-import type { NodeRecord, Position } from '@/features/nodes/lib/types'
+import CreateNodeDialog from '@/features/nodes/components/CreateNodeDialog.vue'
+import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
+import { createNodeRecords, type NodeDraft } from '@/features/nodes/lib/createNodeRecords'
+import type { NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
+const route = useRoute()
 const router = useRouter()
 const canvas = ref(null)
 const canvasElement = ref(null)
+const createParentId = ref<string | null>(null)
 const store = useFlowUiStore()
 const { canUndo, canRedo, undo, redo } = useFlowHistory()
 useFlowShortcuts({ undo, redo })
 const query = useNodesQuery()
-const createMutation = useCreateNodeMutation()
+const replaceMutation = useReplaceNodesMutation()
 const records = computed<NodeRecord[]>(() => query.data.value || [])
 
 function openNode(nodeId: string) {
-  router.push({ name: 'node-details', params: { nodeId: String(nodeId) } })
+  const sameNode = route.name === 'node-details' && String(route.params.nodeId) === String(nodeId)
+  router.push(
+    sameNode ? { name: 'flow' } : { name: 'node-details', params: { nodeId: String(nodeId) } },
+  )
 }
 function restoreFocus(nodeId: string | null) {
   if (records.value.some((record) => String(record.id) === String(nodeId))) {
@@ -38,48 +44,46 @@ function restoreFocus(nodeId: string | null) {
   }
 }
 
-function getCreatePositions(
-  existing: NodeRecord[],
-  parentId: string,
-  created: NodeRecord[],
-): Record<string, Position> {
-  const fallback = layoutGraph(existing)
-  const parentPosition = store.positions[parentId] || fallback[parentId] || { x: 0, y: 0 }
-  const siblings = existing.filter((record) => String(record.parentId) === parentId)
-  let baseX = parentPosition.x
-  if (siblings.length) {
-    const occupied = siblings.flatMap((sibling) => {
-      const siblingId = String(sibling.id)
-      return [siblingId, ...getDescendantIds(existing, siblingId)].map(
-        (nodeId) => store.positions[nodeId]?.x ?? fallback[nodeId]?.x ?? parentPosition.x,
-      )
-    })
-    const branchSpread = created.length === 3 ? X_GAP / 2 : 0
-    baseX = Math.max(...occupied) + X_GAP + branchSpread
-  }
-  const root = created[0]
-  const base = { x: baseX, y: parentPosition.y + Y_GAP }
-  const next: Record<string, Position> = { [String(root.id)]: base }
-  if (created.length === 3) {
-    next[String(created[1].id)] = { x: base.x - X_GAP / 2, y: base.y + Y_GAP }
-    next[String(created[2].id)] = { x: base.x + X_GAP / 2, y: base.y + Y_GAP }
-  }
-  return next
+function openCreate(parentId: string) {
+  createParentId.value = parentId
+}
+function closeCreate() {
+  createParentId.value = null
 }
 
-async function createNode(parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') {
-  const created = createNodeRecords(parentId, type)
-  const positions = getCreatePositions(records.value, parentId, created)
-  store.setPositions(positions)
+const insertParent = computed(() =>
+  records.value.find((record) => String(record.id) === createParentId.value),
+)
+const parentHasChild = computed(() =>
+  records.value.some((record) => String(record.parentId) === String(insertParent.value?.id)),
+)
+
+async function createNode(
+  parentId: string,
+  type: 'sendMessage' | 'addComment' | 'businessHours',
+  draft?: NodeDraft,
+) {
+  const created = createNodeRecords(parentId, type, draft)
+  const next = spliceNodes(records.value, parentId, created)
+  const previous = { ...store.positions }
+  store.setPositions(layoutGraph(next))
   try {
-    await createMutation.mutateAsync(created)
+    await replaceMutation.mutateAsync(next)
+    closeCreate()
     openNode(String(created[0].id))
     await canvas.value?.revealNode(String(created[0].id))
     toast.success(`${created[0].name || 'Node'} created`)
   } catch (error) {
-    store.removePositions(Object.keys(positions))
+    store.removePositions(created.map((record) => record.id))
+    store.setPositions(previous)
     toast.error((error as Error).message)
   }
+}
+
+function submitCreate(draft: NodeDraft & { type: 'sendMessage' | 'addComment' | 'businessHours' }) {
+  const parent = insertParent.value
+  if (!parent) return
+  createNode(String(parent.id), draft.type, draft)
 }
 </script>
 
@@ -106,7 +110,7 @@ async function createNode(parentId: string, type: 'sendMessage' | 'addComment' |
         ref="canvas"
         :records="records"
         @open-node="openNode"
-        @create-node="createNode"
+        @add-node="openCreate"
       />
       <div v-else-if="query.isPending.value" class="absolute inset-0 grid place-items-center p-6">
         <Card class="w-full max-w-md border-border/70 shadow-xl shadow-slate-950/5">
@@ -146,5 +150,13 @@ async function createNode(parentId: string, type: 'sendMessage' | 'addComment' |
       </div>
     </main>
     <NodeDetailsSheet v-if="query.isSuccess.value" :records="records" @closed="restoreFocus" />
+    <CreateNodeDialog
+      v-if="insertParent"
+      :allow-hours="insertParent.type !== 'dateTime'"
+      :parent-name="insertParent.type === 'trigger' ? 'Trigger' : insertParent.name || 'this step'"
+      :has-child="parentHasChild"
+      @close="closeCreate"
+      @create="submitCreate"
+    />
   </div>
 </template>

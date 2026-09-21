@@ -38,7 +38,7 @@ const ViewportBridge = defineComponent({
 const props = defineProps<{ records: NodeRecord[] }>()
 const emit = defineEmits<{
   'open-node': [nodeId: string]
-  'create-node': [parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours']
+  'add-node': [parentId: string]
 }>()
 const store = useFlowUiStore()
 const bridge = ref<{ revealNode: (nodeId: string | number) => Promise<void> } | null>(null)
@@ -50,8 +50,7 @@ const nodes = computed(() =>
     data: {
       ...node.data,
       onOpen: openNode,
-      onCreate: (parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') =>
-        emit('create-node', parentId, type),
+      onAdd: (parentId: string) => emit('add-node', parentId),
     },
   })),
 )

@@ -88,35 +88,14 @@
   .flow-add-trigger {
     @apply grid size-7 place-items-center rounded-full border bg-white;
   }
-
-  .flow-add-option {
-    @apply h-8 rounded-xl border border-border/70 bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none;
-  }
 }
 
 .flow-node {
   animation: flow-node-in 200ms ease;
 }
 
-.vue-flow__node:has(.flow-add-menu) {
-  z-index: 20 !important;
-}
-
 .vue-flow__edge {
   animation: flow-edge-in 180ms ease;
-}
-
-.flow-add-menu-enter-active,
-.flow-add-menu-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.flow-add-menu-enter-from,
-.flow-add-menu-leave-to {
-  opacity: 0;
-  transform: translateY(4px) scale(0.96);
 }
 
 @keyframes flow-node-in {
@@ -166,8 +145,6 @@
 @media (prefers-reduced-motion: reduce) {
   .flow-node,
   .vue-flow__edge,
-  .flow-add-menu-enter-active,
-  .flow-add-menu-leave-active,
   .flow-sheet-backdrop-enter-active,
   .flow-sheet-backdrop-leave-active,
   .flow-sheet-panel-enter-active,

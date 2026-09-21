@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
 import { Clock3, MessageSquare, MessageSquareText, Plus, Play, Split } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 
 import { Card } from '@/components/ui/card'
 import type { NodeRecord } from '@/features/nodes/lib/types'
@@ -15,7 +15,7 @@ const props = defineProps<{
     summary: string
     hasChildren: boolean
     onOpen?: (nodeId: string) => void
-    onCreate?: (parentId: string, type: 'sendMessage' | 'addComment' | 'businessHours') => void
+    onAdd?: (parentId: string) => void
   }
   selected: boolean
   nodeType: string
@@ -38,34 +38,18 @@ const config = computed(() => {
 const editable = computed(() => !['trigger', 'dateTimeConnector'].includes(props.nodeType))
 const isConnectorNode = computed(() => props.nodeType === 'dateTimeConnector')
 const title = computed(() => props.data.record.name || config.value.label)
-const canAddHours = computed(() => props.nodeType !== 'businessHours')
-const rootEl = ref<HTMLElement | null>(null)
-const menuOpen = ref(false)
+const canAdd = computed(() => props.nodeType !== 'businessHours')
 
 function activate() {
   if (editable.value) props.data.onOpen?.(props.id)
 }
-function addChild(type: 'sendMessage' | 'addComment' | 'businessHours') {
-  menuOpen.value = false
-  props.data.onCreate?.(props.id, type)
+function requestCreate() {
+  props.data.onAdd?.(props.id)
 }
-function toggleMenu() {
-  menuOpen.value = !menuOpen.value
-}
-function closeMenu() {
-  menuOpen.value = false
-}
-function onWindowPointerDown(event: PointerEvent) {
-  if (!menuOpen.value || !rootEl.value) return
-  if (!rootEl.value.contains(event.target as Node)) menuOpen.value = false
-}
-
-onMounted(() => window.addEventListener('pointerdown', onWindowPointerDown))
-onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerDown))
 </script>
 
 <template>
-  <div ref="rootEl" class="flow-node-shell relative w-[260px] pb-14">
+  <div class="flow-node-shell relative w-[260px] pb-14">
     <Handle
       v-if="nodeType !== 'trigger'"
       type="target"
@@ -93,7 +77,6 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
       @dblclick="activate"
       @keydown.enter.prevent="activate"
       @keydown.space.prevent="activate"
-      @keydown.esc.prevent="closeMenu"
     >
       <div class="flex items-start gap-2.5 px-3.5 py-3">
         <span
@@ -113,50 +96,19 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
       </div>
     </Card>
     <div
-      class="pointer-events-none absolute bottom-8 left-1/2 h-6 w-0.5 -translate-x-1/2 bg-[#f0a898]"
+      class="pointer-events-none absolute bottom-0 left-1/2 h-14 w-0.5 -translate-x-1/2 bg-[#f0a898]"
       aria-hidden="true"
     />
     <button
+      v-if="canAdd"
       type="button"
-      :data-open="menuOpen ? 'true' : 'false'"
-      class="flow-add-trigger absolute bottom-1 left-1/2 z-30 -translate-x-1/2 border-[#f0a898] bg-white text-slate-700 shadow-sm transition-transform duration-200 ease-out hover:scale-105 focus-visible:scale-105 data-[open=true]:scale-105"
+      class="flow-add-trigger absolute bottom-1 left-1/2 z-30 -translate-x-1/2 border-[#f0a898] bg-white text-slate-700 shadow-sm transition-transform duration-200 ease-out hover:scale-105 focus-visible:scale-105"
       aria-label="Add node"
-      @click.stop="toggleMenu"
+      aria-haspopup="dialog"
+      @click.stop="requestCreate"
     >
-      <Plus :size="14" class="transition-transform duration-200" :class="menuOpen && 'rotate-45'" />
+      <Plus :size="14" />
     </button>
-    <transition name="flow-add-menu">
-      <div
-        v-if="menuOpen"
-        class="flow-add-menu absolute bottom-0 left-[calc(50%+1.35rem)] z-40 flex items-center gap-1 rounded-2xl border border-border/85 bg-background/98 p-1.5 shadow-xl shadow-slate-950/10 backdrop-blur"
-      >
-        <button
-          type="button"
-          class="flow-add-option"
-          aria-label="Add Message node"
-          @click.stop="addChild('sendMessage')"
-        >
-          Message
-        </button>
-        <button
-          type="button"
-          class="flow-add-option"
-          aria-label="Add Comment node"
-          @click.stop="addChild('addComment')"
-        >
-          Comment
-        </button>
-        <button
-          v-if="canAddHours"
-          type="button"
-          class="flow-add-option"
-          aria-label="Add Business Hours node"
-          @click.stop="addChild('businessHours')"
-        >
-          Hours
-        </button>
-      </div>
-    </transition>
     <Handle
       type="source"
       :position="Position.Bottom"

@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getDescendantIds, getNodeSummary } from '@/features/flow/lib/graph'
+import { getNodeSummary, layoutGraph, removeNode } from '@/features/flow/lib/graph'
 import {
-  useDeleteNodesMutation,
+  useReplaceNodesMutation,
   useUpdateNodeMutation,
 } from '@/features/nodes/composables/useNodes'
 import {
@@ -33,7 +33,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useFlowUiStore()
 const updateMutation = useUpdateNodeMutation()
-const deleteMutation = useDeleteNodesMutation()
+const replaceMutation = useReplaceNodesMutation()
 const draft = ref<{ name: string; data: Record<string, unknown> } | null>(null)
 const originalDraft = ref('')
 const confirmMode = ref<'dirty' | 'delete' | 'leaving' | null>(null)
@@ -46,8 +46,10 @@ const editable = computed(
   () => record.value && !['trigger', 'dateTimeConnector'].includes(record.value.type),
 )
 const dirty = computed(() => draft.value && JSON.stringify(draft.value) !== originalDraft.value)
-const descendants = computed(() =>
-  record.value ? getDescendantIds(props.records, record.value.id) : [],
+const deleteHint = computed(() =>
+  record.value?.type === 'dateTime'
+    ? 'Success and Failure are removed with this step. Nodes on those paths stay in the flow.'
+    : 'Only this step is removed. Nodes below it stay connected to the step above.',
 )
 const validationError = computed(() => validateDraft(draft.value))
 const canSave = computed(
@@ -211,15 +213,16 @@ function requestDelete() {
 async function deleteNode() {
   const current = record.value
   if (!current) return
-  const ids = [String(current.id), ...descendants.value]
   const name = current.name || 'Node'
   const nodeId = String(current.id)
+  const next = removeNode(props.records, current.id)
   confirmMode.value = 'leaving'
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
   try {
-    await deleteMutation.mutateAsync(ids)
-    store.removePositions(ids)
+    await replaceMutation.mutateAsync(next.records)
+    store.removePositions(next.removedIds)
+    store.setPositions(layoutGraph(next.records))
     toast.success(`${name} deleted`)
   } catch (error) {
     toast.error((error as Error).message)
@@ -326,7 +329,7 @@ async function deleteNode() {
             <Button
               variant="ghost"
               class="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              :disabled="deleteMutation.isPending.value"
+              :disabled="replaceMutation.isPending.value"
               @click="requestDelete"
             >
               <Trash2 /> Delete
@@ -359,15 +362,13 @@ async function deleteNode() {
     <div role="alertdialog" class="w-full max-w-sm rounded-lg border bg-background p-5 shadow-xl">
       <h3 class="text-lg font-semibold">Delete {{ record?.name || 'node' }}?</h3>
       <p class="mt-1 text-sm text-muted-foreground">
-        This also deletes {{ descendants.length }} descendant{{
-          descendants.length === 1 ? '' : 's'
-        }}. This action cannot be undone.
+        {{ deleteHint }}
       </p>
       <div class="mt-4 flex justify-end gap-2">
         <Button variant="outline" @click="confirmMode = null">Cancel</Button>
         <Button
           variant="destructive"
-          :disabled="deleteMutation.isPending.value"
+          :disabled="replaceMutation.isPending.value"
           @click="deleteNode"
         >
           Delete

@@ -46,11 +46,11 @@ TanStack Vue Query exclusively owns node records. Every mutation performs an opt
 
 ## Persistence and reset
 
-Node records are stored under `rocketbots-flow:v1`. Canvas positions use `rocketbots-flow-positions:v1`. To reset the assessment:
+Node records are stored under `rocketbots-flow:v1`. Canvas positions use `rocketbots-flow-positions:v2`. To reset the assessment:
 
 ```js
 localStorage.removeItem('rocketbots-flow:v1')
-localStorage.removeItem('rocketbots-flow-positions:v1')
+localStorage.removeItem('rocketbots-flow-positions:v2')
 location.reload()
 ```
 
@@ -61,13 +61,13 @@ duplicate ID, and storage quota failures are surfaced in the UI and optimistic m
 
 ## Editing rules
 
-- Creation is inline on the canvas via a hover/focus circular add control that expands to Message/Comment/Hours actions.
+- The **+** on a step opens a dialog for title, description, and type, then inserts that step on the edge below it. Business Hours has no **+**; add the next steps from Success or Failure.
 - Titles are required and limited to 80 characters; descriptions are required and limited to 240.
 - Send Message must contain non-empty text or an attachment before save.
 - Images: JPEG/PNG/WebP/GIF, maximum four files, 750 KiB each, and 3 MiB total encoded local data. Images persist as data URLs because no upload API is supplied.
 - Comments are 1–1000 trimmed characters.
 - Business Hours require seven unique weekdays, `HH:mm` values, and start before end. Supported timezones are UTC, Asia/Kuala_Lumpur, and the current browser IANA timezone when distinct.
-- Delete removes the selected node and every descendant atomically. Trigger and connector records are display-only.
+- Delete removes only the selected step and reconnects the nodes below it to the step above. Deleting Business Hours also removes its Success and Failure connectors, and the nodes on those paths stay in the flow. Trigger and connector records are display-only.
 
 ## Accessibility and history
 

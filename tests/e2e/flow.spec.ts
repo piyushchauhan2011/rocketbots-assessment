@@ -38,7 +38,11 @@ test('creates and validates business hours with generated connectors', async ({ 
   await page.goto('/')
   const triggerNode = page.locator('.flow-node-shell').first()
   await triggerNode.getByRole('button', { name: 'Add node' }).click()
-  await triggerNode.getByRole('button', { name: 'Add Business Hours node' }).click()
+  await page.getByLabel('Title').fill('Office Hours')
+  await page.getByLabel('Description').fill('Route by schedule')
+  await page.getByRole('combobox', { name: 'Type of node' }).click()
+  await page.getByRole('option', { name: 'Business Hours' }).click()
+  await page.getByRole('button', { name: 'Create node' }).click()
   await expect(page.locator('.flow-node')).toHaveCount(10)
   await expect(page.getByText('Business Hours', { exact: true }).last()).toBeVisible()
   await page.getByLabel('End', { exact: true }).first().fill('09:00')
@@ -49,7 +53,9 @@ test('creates and validates business hours with generated connectors', async ({ 
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
 })
 
-test('uses undo redo, deletes a subtree, and supports keyboard activation', async ({ page }) => {
+test('uses undo redo, keeps nodes below a deleted step, and supports keyboard activation', async ({
+  page,
+}) => {
   await page.goto('/')
   await expect(page.locator('.flow-node')).toHaveCount(7)
   await page.getByRole('button', { name: 'Send Message: Welcome Message' }).click()
@@ -65,10 +71,12 @@ test('uses undo redo, deletes a subtree, and supports keyboard activation', asyn
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL('/nodes/b6a0c1')
   await page.getByRole('button', { name: 'Delete' }).click()
-  await expect(page.getByText('This also deletes 1 descendant.')).toBeVisible()
+  await expect(
+    page.getByText('Only this step is removed. Nodes below it stay connected to the step above.'),
+  ).toBeVisible()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('Away Message', { exact: true })).toHaveCount(0)
-  await expect(page.getByText('Add Comment #1', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Add Comment #1', { exact: true })).toBeVisible()
   await page.goto('/nodes/161f52')
   await expect(page).toHaveURL('/')
 })
