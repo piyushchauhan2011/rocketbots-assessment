@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: write
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -24,6 +27,12 @@ jobs:
         run: pnpm lint
       - name: Unit and integration coverage
         run: pnpm test:unit:coverage
+      - name: Publish coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          file-coverage-mode: all
+          sort-by: lines-asc
       - name: Build
         run: pnpm build
       - name: Install Playwright Chromium

@@ -22,6 +22,7 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'json-summary', 'json', 'html'],
       include: [
         'src/features/flow/lib/**/*.ts',
         'src/features/nodes/api/**/*.ts',
