@@ -38,6 +38,11 @@ test('creates and validates business hours with generated connectors', async ({ 
   await page.goto('/')
   const triggerNode = page.locator('.flow-node-shell').first()
   await triggerNode.getByRole('button', { name: 'Add node' }).click()
+  await page.getByRole('button', { name: 'Create node' }).click()
+  await expect(page.getByLabel('Title')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Title is required')).toBeVisible()
+  await expect(page.getByLabel('Description')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Description is required')).toBeVisible()
   await page.getByLabel('Title').fill('Office Hours')
   await page.getByLabel('Description').fill('Route by schedule')
   await page.getByRole('combobox', { name: 'Type of node' }).click()
@@ -50,6 +55,14 @@ test('creates and validates business hours with generated connectors', async ({ 
     .getByRole('listbox', { name: 'End times' })
     .getByRole('option', { name: '09:00 AM' })
     .click()
+  await expect(page.getByRole('combobox', { name: /^Start:/ }).first()).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  )
+  await expect(page.getByRole('combobox', { name: /^End:/ }).first()).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  )
   await expect(page.getByText('Start time must be earlier than end time')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   await page.getByRole('combobox', { name: /^End:/ }).first().click()
@@ -59,6 +72,33 @@ test('creates and validates business hours with generated connectors', async ({ 
     .click()
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+})
+
+test('shows inline field errors across node editors', async ({ page }) => {
+  await page.goto('/nodes/b6a0c1')
+
+  const title = page.getByLabel('Title')
+  await title.fill('')
+  await expect(title).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Title is required')).toBeVisible()
+  await title.fill('Away Message')
+
+  const upload = page.getByLabel('Add image')
+  await upload.setInputFiles('package.json')
+  await expect(upload).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Use a JPEG, PNG, WebP, or GIF image')).toBeVisible()
+
+  const message = page.getByLabel('Text item 1')
+  await message.fill('')
+  await expect(message).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Add at least one message or attachment')).toBeVisible()
+  await message.fill('Sorry, we are currently away. We will respond as soon as possible.')
+
+  await page.goto('/nodes/e879e4')
+  const comment = page.getByRole('textbox', { name: 'Comment', exact: true })
+  await comment.fill('')
+  await expect(comment).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Comment is required')).toBeVisible()
 })
 
 test('uses undo redo, keeps nodes below a deleted step, and supports keyboard activation', async ({

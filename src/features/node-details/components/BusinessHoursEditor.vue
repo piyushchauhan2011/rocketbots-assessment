@@ -2,12 +2,19 @@
 import { CalendarDays, Clock3 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
+import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import TimeField from '@/components/ui/time-picker/TimeField.vue'
+import type { BusinessHoursValidation } from '@/features/nodes/lib/nodeSchemas'
 import type { BusinessHourTime } from '@/features/nodes/lib/types'
 
-const props = defineProps<{ times: BusinessHourTime[]; timezone: string }>()
+const props = defineProps<{
+  times: BusinessHourTime[]
+  timezone: string
+  validation: BusinessHoursValidation
+  timezoneError?: string
+}>()
 const emit = defineEmits<{
   'update:times': [value: BusinessHourTime[]]
   'update:timezone': [value: string]
@@ -72,36 +79,68 @@ function update(index: number, field: 'startTime' | 'endTime', value: string) {
       <div
         v-for="(time, index) in times"
         :key="time.day"
-        class="grid grid-cols-[4.5rem_1fr] items-center gap-2 border-b px-3 py-2.5 last:border-b-0"
+        class="grid grid-cols-[4.5rem_1fr] items-start gap-2 border-b px-3 py-2.5 last:border-b-0"
       >
-        <span class="text-sm font-medium text-slate-700">
+        <span class="pt-2 text-sm font-medium text-slate-700">
           {{ labels[time.day] || time.day }}
         </span>
-        <div class="flex min-w-0 items-center gap-2">
-          <TimeField
-            :id="`start-${time.day}`"
-            label="Start"
-            :model-value="time.startTime"
-            @update:model-value="update(index, 'startTime', $event)"
-          />
-          <span class="shrink-0 text-sm text-slate-400">to</span>
-          <TimeField
-            :id="`end-${time.day}`"
-            label="End"
-            :model-value="time.endTime"
-            @update:model-value="update(index, 'endTime', $event)"
+        <div class="grid min-w-0 gap-1.5">
+          <div class="flex min-w-0 items-center gap-2">
+            <TimeField
+              :id="`start-${time.day}`"
+              label="Start"
+              :model-value="time.startTime"
+              :invalid="
+                Boolean(
+                  validation.rowErrors[index]?.startTime || validation.rowErrors[index]?.range,
+                )
+              "
+              :described-by="
+                validation.rowErrors[index]?.startTime || validation.rowErrors[index]?.range
+                  ? `hours-${time.day}-error`
+                  : undefined
+              "
+              @update:model-value="update(index, 'startTime', $event)"
+            />
+            <span class="shrink-0 text-sm text-slate-400">to</span>
+            <TimeField
+              :id="`end-${time.day}`"
+              label="End"
+              :model-value="time.endTime"
+              :invalid="
+                Boolean(validation.rowErrors[index]?.endTime || validation.rowErrors[index]?.range)
+              "
+              :described-by="
+                validation.rowErrors[index]?.endTime || validation.rowErrors[index]?.range
+                  ? `hours-${time.day}-error`
+                  : undefined
+              "
+              @update:model-value="update(index, 'endTime', $event)"
+            />
+          </div>
+          <FieldError
+            :id="`hours-${time.day}-error`"
+            :message="
+              validation.rowErrors[index]?.startTime ||
+              validation.rowErrors[index]?.endTime ||
+              validation.rowErrors[index]?.range
+            "
           />
         </div>
       </div>
     </div>
+    <FieldError id="business-hours-error" :message="validation.formError" />
     <div class="grid gap-2">
       <Label for="timezone">Timezone</Label>
       <Select
         id="timezone"
         :model-value="timezone"
         :options="timezoneOptions"
+        :invalid="Boolean(timezoneError)"
+        :described-by="timezoneError ? 'timezone-error' : undefined"
         @update:model-value="emit('update:timezone', $event)"
       />
+      <FieldError id="timezone-error" :message="timezoneError" />
     </div>
   </section>
 </template>

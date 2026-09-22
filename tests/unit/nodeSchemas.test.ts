@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   createNodeSchema,
+  getBusinessHoursValidation,
   MAX_ATTACHMENT_BYTES,
   validateBusinessHours,
   validateMessagePayload,
@@ -58,6 +59,11 @@ describe('node validation', () => {
     const equal = hours()
     equal[0].endTime = '09:00'
     expect(validateBusinessHours(equal)).toContain('earlier')
+    const rangeValidation = getBusinessHoursValidation(equal)
+    expect(rangeValidation.rowErrors[0]).toEqual({
+      range: 'Start time must be earlier than end time',
+    })
+    expect(rangeValidation.firstError).toBe('Start time must be earlier than end time')
     const invalid = hours()
     invalid[0].startTime = '25:00'
     expect(validateBusinessHours(invalid)).toContain('valid')

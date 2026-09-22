@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import { Button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
@@ -28,7 +29,7 @@ const dialog = ref<HTMLElement | null>(null)
 const title = ref('')
 const description = ref('')
 const type = ref<'sendMessage' | 'addComment' | 'businessHours'>('sendMessage')
-const error = ref('')
+const submitted = ref(false)
 const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
 const typeOptions = [
@@ -37,21 +38,31 @@ const typeOptions = [
   ...(props.allowHours ? [{ value: 'businessHours', label: 'Business Hours' }] : []),
 ]
 
+const validation = computed(() =>
+  createNodeSchema.safeParse({
+    title: title.value,
+    description: description.value,
+    type: type.value,
+  }),
+)
+const errors = computed(() => {
+  const fields: Partial<Record<'title' | 'description' | 'type', string>> = {}
+  if (!submitted.value || validation.value.success) return fields
+  for (const issue of validation.value.error.issues) {
+    const field = issue.path[0] as 'title' | 'description' | 'type'
+    fields[field] ||= issue.message
+  }
+  return fields
+})
+
 function close() {
   emit('close')
   returnFocus?.focus()
 }
 function submit() {
-  const parsed = createNodeSchema.safeParse({
-    title: title.value,
-    description: description.value,
-    type: type.value,
-  })
-  if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message || 'Check the form'
-    return
-  }
-  error.value = ''
+  submitted.value = true
+  const parsed = validation.value
+  if (!parsed.success) return
   emit('create', parsed.data)
 }
 function trapFocus(event: KeyboardEvent) {
@@ -99,7 +110,15 @@ onMounted(() => document.getElementById('create-title')?.focus())
       <form class="mt-4 grid gap-4" @submit.prevent="submit">
         <div class="grid gap-2">
           <Label for="create-title">Title</Label>
-          <Input id="create-title" v-model="title" maxlength="80" autocomplete="off" />
+          <Input
+            id="create-title"
+            v-model="title"
+            maxlength="80"
+            autocomplete="off"
+            :aria-invalid="Boolean(errors.title)"
+            :aria-describedby="errors.title ? 'create-title-error' : undefined"
+          />
+          <FieldError id="create-title-error" :message="errors.title" />
         </div>
         <div class="grid gap-2">
           <Label for="create-description">Description</Label>
@@ -108,19 +127,22 @@ onMounted(() => document.getElementById('create-title')?.focus())
             v-model="description"
             maxlength="240"
             class="min-h-24 resize-y"
+            :aria-invalid="Boolean(errors.description)"
+            :aria-describedby="errors.description ? 'create-description-error' : undefined"
           />
+          <FieldError id="create-description-error" :message="errors.description" />
         </div>
         <div class="grid gap-2">
           <Label for="create-type">Type of node</Label>
-          <Select id="create-type" v-model="type" :options="typeOptions" />
+          <Select
+            id="create-type"
+            v-model="type"
+            :options="typeOptions"
+            :invalid="Boolean(errors.type)"
+            :described-by="errors.type ? 'create-type-error' : undefined"
+          />
+          <FieldError id="create-type-error" :message="errors.type" />
         </div>
-        <p
-          v-if="error"
-          class="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
-          role="alert"
-        >
-          {{ error }}
-        </p>
         <div class="flex justify-end gap-2">
           <Button type="button" variant="outline" @click="close">Cancel</Button>
           <Button type="submit">Create node</Button>

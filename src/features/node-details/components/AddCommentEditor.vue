@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-defineProps<{ modelValue: string }>()
+defineProps<{ modelValue: string; error?: string }>()
 defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
@@ -19,8 +20,11 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
         :model-value="modelValue"
         maxlength="1000"
         placeholder="Add a note for your team"
+        :aria-invalid="Boolean(error)"
+        :aria-describedby="error ? 'comment-body-error' : undefined"
         @update:model-value="$emit('update:modelValue', $event)"
       />
+      <FieldError id="comment-body-error" :message="error" />
     </div>
   </section>
 </template>

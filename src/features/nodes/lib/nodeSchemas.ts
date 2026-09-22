@@ -47,15 +47,63 @@ export function validateUpload(file: File, payload: MessagePayloadItem[]) {
   return null
 }
 
-export function validateBusinessHours(times: BusinessHourTime[]) {
-  if (!Array.isArray(times) || times.length !== 7) return 'Business hours require seven weekdays'
-  const days = new Set()
-  for (const time of times) {
-    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time.startTime || '')) return 'Enter a valid start time'
-    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time.endTime || '')) return 'Enter a valid end time'
-    if (time.startTime >= time.endTime) return 'Start time must be earlier than end time'
-    if (days.has(time.day)) return 'Each weekday must appear once'
-    days.add(time.day)
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+
+export interface BusinessHourRowErrors {
+  startTime?: string
+  endTime?: string
+  range?: string
+}
+
+export interface BusinessHoursValidation {
+  formError?: string
+  rowErrors: BusinessHourRowErrors[]
+  firstError: string | null
+}
+
+export function getBusinessHoursValidation(times: BusinessHourTime[]): BusinessHoursValidation {
+  if (!Array.isArray(times)) {
+    const formError = 'Business hours require seven weekdays'
+    return { formError, rowErrors: [], firstError: formError }
   }
-  return null
+
+  const messages: string[] = []
+  let formError: string | undefined
+  if (times.length !== 7) {
+    formError = 'Business hours require seven weekdays'
+    messages.push(formError)
+  }
+
+  const days = new Set()
+  const rowErrors = times.map((time) => {
+    const errors: BusinessHourRowErrors = {}
+    const validStart = TIME_PATTERN.test(time.startTime || '')
+    const validEnd = TIME_PATTERN.test(time.endTime || '')
+
+    if (!validStart) {
+      errors.startTime = 'Enter a valid start time'
+      messages.push(errors.startTime)
+    }
+    if (!validEnd) {
+      errors.endTime = 'Enter a valid end time'
+      messages.push(errors.endTime)
+    }
+    if (validStart && validEnd && time.startTime >= time.endTime) {
+      errors.range = 'Start time must be earlier than end time'
+      messages.push(errors.range)
+    }
+    if (days.has(time.day)) {
+      const duplicateError = 'Each weekday must appear once'
+      formError ||= duplicateError
+      messages.push(duplicateError)
+    }
+    days.add(time.day)
+    return errors
+  })
+
+  return { formError, rowErrors, firstError: messages[0] ?? null }
+}
+
+export function validateBusinessHours(times: BusinessHourTime[]) {
+  return getBusinessHoursValidation(times).firstError
 }

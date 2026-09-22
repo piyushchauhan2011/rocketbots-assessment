@@ -4,12 +4,13 @@ import { ref } from 'vue'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { validateUpload } from '@/features/nodes/lib/nodeSchemas'
 import type { MessagePayloadItem } from '@/features/nodes/lib/types'
 
-const props = defineProps<{ modelValue: MessagePayloadItem[] }>()
+const props = defineProps<{ modelValue: MessagePayloadItem[]; error?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: MessagePayloadItem[]] }>()
 const uploadError = ref('')
 
@@ -68,6 +69,7 @@ async function upload(event: Event) {
     <div>
       <h3 class="text-sm font-semibold">Message content</h3>
       <p class="mt-1 text-xs text-muted-foreground">Text and images are sent in this order.</p>
+      <FieldError id="message-content-error" :message="error" />
     </div>
     <Card
       v-for="(item, index) in modelValue"
@@ -81,6 +83,8 @@ async function upload(event: Event) {
             :id="`message-${index}`"
             class="min-h-24 resize-y"
             :model-value="item.text"
+            :aria-invalid="Boolean(error && !item.text.trim())"
+            :aria-describedby="error && !item.text.trim() ? 'message-content-error' : undefined"
             @update:model-value="replace(index, { ...item, text: $event })"
           />
         </div>
@@ -109,7 +113,13 @@ async function upload(event: Event) {
       <Button type="button" variant="outline" size="sm" @click="appendText">
         <Plus /> Add text
       </Button>
-      <Button as="label" variant="outline" size="sm" for="attachment-upload">
+      <Button
+        as="label"
+        variant="outline"
+        size="sm"
+        for="attachment-upload"
+        :class="uploadError && 'border-destructive text-destructive'"
+      >
         <ImagePlus /> Add image
       </Button>
       <input
@@ -118,11 +128,11 @@ async function upload(event: Event) {
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         multiple
+        :aria-invalid="Boolean(uploadError)"
+        :aria-describedby="uploadError ? 'attachment-upload-error' : undefined"
         @change="upload"
       />
     </div>
-    <p v-if="uploadError" class="text-xs font-medium text-destructive" role="alert">
-      {{ uploadError }}
-    </p>
+    <FieldError id="attachment-upload-error" :message="uploadError" />
   </section>
 </template>
