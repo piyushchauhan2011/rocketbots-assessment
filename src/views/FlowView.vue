@@ -111,10 +111,22 @@ function submitCreate(draft: NodeDraft & { type: 'sendMessage' | 'addComment' | 
     <div
       class="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-lg bg-background/85 p-1.5 shadow-md backdrop-blur"
     >
-      <Button variant="ghost" size="icon" aria-label="Undo" :disabled="!canUndo" @click="undoHistory">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Undo"
+        :disabled="!canUndo"
+        @click="undoHistory"
+      >
         <Undo2 />
       </Button>
-      <Button variant="ghost" size="icon" aria-label="Redo" :disabled="!canRedo" @click="redoHistory">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Redo"
+        :disabled="!canRedo"
+        @click="redoHistory"
+      >
         <Redo2 />
       </Button>
     </div>
