@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,11 +17,12 @@ import {
 } from '@/features/nodes/composables/useNodes'
 import {
   DESCRIPTION_MAX,
+  getBusinessHoursValidation,
   TITLE_MAX,
-  validateBusinessHours,
   validateMessagePayload,
+  type BusinessHoursValidation,
 } from '@/features/nodes/lib/nodeSchemas'
-import type { NodeRecord } from '@/features/nodes/lib/types'
+import type { BusinessHourTime, MessagePayloadItem, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 import AddCommentEditor from './AddCommentEditor.vue'
@@ -51,9 +53,21 @@ const deleteHint = computed(() =>
     ? 'Success and Failure are removed with this step. Nodes on those paths stay in the flow.'
     : 'Only this step is removed. Nodes below it stay connected to the step above.',
 )
-const validationError = computed(() => validateDraft(draft.value))
+const validationErrors = computed(() => validateDraft(draft.value))
+const hasValidationErrors = computed(() => {
+  const errors = validationErrors.value
+  return Boolean(
+    errors.form ||
+    errors.title ||
+    errors.description ||
+    errors.message ||
+    errors.comment ||
+    errors.timezone ||
+    errors.businessHours.firstError,
+  )
+})
 const canSave = computed(
-  () => dirty.value && !validationError.value && !updateMutation.isPending.value,
+  () => dirty.value && !hasValidationErrors.value && !updateMutation.isPending.value,
 )
 const headerMeta = computed(() => {
   const type = record.value?.type
@@ -101,44 +115,66 @@ function makeDraft(source: NodeRecord) {
   if (source.type === 'addComment') data.comment = data.comment || ''
   return { name: source.name || '', data }
 }
-function validateComment(value: { data: Record<string, unknown> }) {
-  const comment = value.data.comment?.trim() || ''
-  return comment.length >= 1 && comment.length <= 1000
-    ? null
-    : 'Comment must contain 1–1000 characters'
+type DraftValue = { name: string; data: Record<string, unknown> }
+
+interface DraftValidation {
+  form?: string
+  title?: string
+  description?: string
+  message?: string
+  comment?: string
+  timezone?: string
+  businessHours: BusinessHoursValidation
 }
 
-function validateHours(value: { data: Record<string, unknown> }) {
-  const zones = new Set([
-    'UTC',
-    'Asia/Kuala_Lumpur',
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-  ])
-  if (!zones.has(value.data.timezone)) return 'Choose an available timezone'
-  return validateBusinessHours(value.data.times)
+function validateCommonDraft(value: DraftValue): Pick<DraftValidation, 'title' | 'description'> {
+  const errors: Pick<DraftValidation, 'title' | 'description'> = {}
+  const title = value.name.trim()
+  const description = String(value.data.description || '').trim()
+  if (!title) errors.title = 'Title is required'
+  else if (title.length > TITLE_MAX) errors.title = 'Title must be 80 characters or less'
+  if (!description) errors.description = 'Description is required'
+  else if (description.length > DESCRIPTION_MAX) {
+    errors.description = 'Description must be 240 characters or less'
+  }
+  return errors
 }
 
 const TYPE_VALIDATORS = {
-  sendMessage: (value) => validateMessagePayload(value.data.payload),
-  addComment: validateComment,
-  dateTime: validateHours,
+  sendMessage: (value: DraftValue) => ({
+    message: validateMessagePayload(value.data.payload as MessagePayloadItem[]) || undefined,
+  }),
+  addComment: (value: DraftValue) => {
+    const comment = String(value.data.comment || '').trim()
+    if (!comment) return { comment: 'Comment is required' }
+    if (comment.length > 1000) return { comment: 'Comment must be 1000 characters or less' }
+    return {}
+  },
+  dateTime: (value: DraftValue) => {
+    const zones = new Set([
+      'UTC',
+      'Asia/Kuala_Lumpur',
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ])
+    return {
+      timezone: zones.has(String(value.data.timezone)) ? undefined : 'Choose an available timezone',
+      businessHours: getBusinessHoursValidation(value.data.times as BusinessHourTime[]),
+    }
+  },
 }
 
-function validateCommon(value: { name: string; data: Record<string, unknown> }) {
-  const title = value.name.trim()
-  const description = value.data.description?.trim() || ''
-  if (!title || title.length > TITLE_MAX) return 'Title must contain 1–80 characters'
-  if (!description || description.length > DESCRIPTION_MAX) {
-    return 'Description must contain 1–240 characters'
+function validateDraft(value: DraftValue | null): DraftValidation {
+  if (!value) {
+    return {
+      form: 'Node data is unavailable',
+      businessHours: { rowErrors: [], firstError: null },
+    }
   }
-  return null
-}
-
-function validateDraft(value: { name: string; data: Record<string, unknown> } | null) {
-  if (!value) return 'Node data is unavailable'
-  const commonError = validateCommon(value)
-  if (commonError) return commonError
-  return TYPE_VALIDATORS[record.value?.type]?.(value) || null
+  return {
+    businessHours: { rowErrors: [], firstError: null },
+    ...validateCommonDraft(value),
+    ...TYPE_VALIDATORS[record.value?.type]?.(value),
+  }
 }
 function resetDraft() {
   if (!editable.value) {
@@ -296,7 +332,14 @@ async function deleteNode() {
               <div class="grid gap-5">
                 <div class="grid gap-2">
                   <Label for="node-title">Title</Label>
-                  <Input id="node-title" v-model="draft.name" maxlength="80" />
+                  <Input
+                    id="node-title"
+                    v-model="draft.name"
+                    maxlength="80"
+                    :aria-invalid="Boolean(validationErrors.title)"
+                    :aria-describedby="validationErrors.title ? 'node-title-error' : undefined"
+                  />
+                  <FieldError id="node-title-error" :message="validationErrors.title" />
                 </div>
                 <div class="grid gap-2">
                   <Label for="node-description">Description</Label>
@@ -305,29 +348,31 @@ async function deleteNode() {
                     v-model="draft.data.description"
                     maxlength="240"
                     class="min-h-24 resize-y"
+                    :aria-invalid="Boolean(validationErrors.description)"
+                    :aria-describedby="
+                      validationErrors.description ? 'node-description-error' : undefined
+                    "
                   />
+                  <FieldError id="node-description-error" :message="validationErrors.description" />
                 </div>
               </div>
               <SendMessageEditor
                 v-if="record.type === 'sendMessage'"
                 v-model="draft.data.payload"
+                :error="validationErrors.message"
               />
               <AddCommentEditor
                 v-else-if="record.type === 'addComment'"
                 v-model="draft.data.comment"
+                :error="validationErrors.comment"
               />
               <BusinessHoursEditor
                 v-else-if="record.type === 'dateTime'"
                 v-model:times="draft.data.times"
                 v-model:timezone="draft.data.timezone"
+                :validation="validationErrors.businessHours"
+                :timezone-error="validationErrors.timezone"
               />
-              <p
-                v-if="validationError"
-                class="mt-4 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
-                role="alert"
-              >
-                {{ validationError }}
-              </p>
             </div>
           </div>
           <footer class="flex flex-row items-center justify-between border-t bg-background p-4">

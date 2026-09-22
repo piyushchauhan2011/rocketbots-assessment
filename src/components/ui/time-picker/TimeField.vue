@@ -2,7 +2,13 @@
 import { Clock3 } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-const props = defineProps<{ id: string; label: string; modelValue: string }>()
+const props = defineProps<{
+  id: string
+  label: string
+  modelValue: string
+  invalid?: boolean
+  describedBy?: string
+}>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const open = ref(false)
@@ -61,7 +67,9 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown))
       :aria-label="`${label}: ${formatTime(modelValue)}`"
       :aria-controls="`${id}-times`"
       :aria-expanded="open"
-      class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm tabular-nums shadow-sm transition-colors hover:bg-muted/40 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+      :aria-describedby="describedBy"
+      :aria-invalid="invalid || undefined"
+      class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm tabular-nums shadow-sm transition-colors hover:bg-muted/40 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/30"
       @click="open = !open"
     >
       <span>{{ formatTime(modelValue) }}</span>

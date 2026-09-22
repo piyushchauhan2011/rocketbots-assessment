@@ -7,6 +7,8 @@ const props = defineProps<{
   modelValue: string
   options: { value: string; label: string }[]
   placeholder?: string
+  invalid?: boolean
+  describedBy?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
@@ -68,11 +70,13 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown))
     <button
       :id="id"
       type="button"
-      class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+      class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/30"
       role="combobox"
       aria-haspopup="listbox"
       :aria-expanded="open"
       :aria-controls="listId"
+      :aria-describedby="describedBy"
+      :aria-invalid="invalid || undefined"
       @click="open = !open"
       @keydown="onKeydown"
     >
