@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 
 import { Button } from '@/components/ui/button'
@@ -9,26 +9,25 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { createNodeSchema } from '@/features/nodes/lib/nodeSchemas'
 
-const props = defineProps<{
-  allowHours: boolean
-  parentName: string
-  hasChild: boolean
-}>()
-const emit = defineEmits<{
-  close: []
-  create: [
-    value: {
-      title: string
-      description: string
-      type: 'sendMessage' | 'addComment' | 'businessHours'
-    },
-  ]
-}>()
+/** @typedef {'sendMessage' | 'addComment' | 'businessHours'} CreateNodeType */
+/**
+ * @typedef {object} CreateNodePayload
+ * @property {string} title
+ * @property {string} description
+ * @property {CreateNodeType} type
+ */
 
-const dialog = ref<HTMLElement | null>(null)
+const props = defineProps({
+  allowHours: { type: Boolean, required: true },
+  parentName: { type: String, required: true },
+  hasChild: { type: Boolean, required: true },
+})
+const emit = defineEmits(['close', 'create'])
+
+const dialog = ref(/** @type {HTMLElement | null} */ (null))
 const title = ref('')
 const description = ref('')
-const type = ref<'sendMessage' | 'addComment' | 'businessHours'>('sendMessage')
+const type = ref(/** @type {CreateNodeType} */ ('sendMessage'))
 const submitted = ref(false)
 const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
@@ -46,10 +45,11 @@ const validation = computed(() =>
   }),
 )
 const errors = computed(() => {
-  const fields: Partial<Record<'title' | 'description' | 'type', string>> = {}
+  /** @type {Partial<Record<'title' | 'description' | 'type', string>>} */
+  const fields = {}
   if (!submitted.value || validation.value.success) return fields
   for (const issue of validation.value.error.issues) {
-    const field = issue.path[0] as 'title' | 'description' | 'type'
+    const field = /** @type {'title' | 'description' | 'type'} */ (issue.path[0])
     fields[field] ||= issue.message
   }
   return fields
@@ -63,18 +63,21 @@ function submit() {
   submitted.value = true
   const parsed = validation.value
   if (!parsed.success) return
-  emit('create', parsed.data)
+  emit('create', /** @type {CreateNodePayload} */ (parsed.data))
 }
-function trapFocus(event: KeyboardEvent) {
+/** @param {KeyboardEvent} event */
+function trapFocus(event) {
   if (event.key === 'Escape') {
     event.preventDefault()
     close()
     return
   }
   if (event.key !== 'Tab' || !dialog.value) return
-  const items = [...dialog.value.querySelectorAll<HTMLElement>('button, input, textarea')].filter(
-    (item) => !item.hasAttribute('disabled'),
-  )
+  const items = [
+    .../** @type {NodeListOf<HTMLElement>} */ (
+      dialog.value.querySelectorAll('button, input, textarea')
+    ),
+  ].filter((item) => !item.hasAttribute('disabled'))
   const first = items[0]
   const last = items.at(-1)
   if (!first || !last) return

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { CalendarDays, Clock3 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
@@ -6,19 +6,24 @@ import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import TimeField from '@/components/ui/time-picker/TimeField.vue'
-import type { BusinessHoursValidation } from '@/features/nodes/lib/nodeSchemas'
-import type { BusinessHourTime } from '@/features/nodes/lib/types'
 
-const props = defineProps<{
-  times: BusinessHourTime[]
-  timezone: string
-  validation: BusinessHoursValidation
-  timezoneError?: string
-}>()
-const emit = defineEmits<{
-  'update:times': [value: BusinessHourTime[]]
-  'update:timezone': [value: string]
-}>()
+/** @typedef {import('@/features/nodes/lib/nodeSchemas.js').BusinessHoursValidation} BusinessHoursValidation */
+/** @typedef {import('@/features/nodes/lib/types.js').BusinessHourTime} BusinessHourTime */
+/** @typedef {import('@/features/nodes/lib/types.js').Weekday} Weekday */
+/** @typedef {import('vue').PropType<BusinessHourTime[]>} BusinessHourTimesProp */
+/** @typedef {import('vue').PropType<BusinessHoursValidation>} BusinessHoursValidationProp */
+
+const props =
+  /** @type {{ times: BusinessHourTime[], timezone: string, validation: BusinessHoursValidation, timezoneError?: string }} */ (
+    defineProps({
+      times: { type: /** @type {BusinessHourTimesProp} */ (Array), required: true },
+      timezone: { type: String, required: true },
+      validation: { type: /** @type {BusinessHoursValidationProp} */ (Object), required: true },
+      timezoneError: { type: String, default: undefined },
+    })
+  )
+const emit = defineEmits(['update:times', 'update:timezone'])
+/** @type {Record<Weekday, string>} */
 const labels = {
   mon: 'Mon',
   tue: 'Tue',
@@ -33,7 +38,8 @@ const timezones = computed(() => [
   ...new Set(['UTC', 'Asia/Kuala_Lumpur', browserTimezone].filter(Boolean)),
 ])
 
-function formatTimezone(zone: string) {
+/** @param {string} zone */
+function formatTimezone(zone) {
   let offset = 'GMT+00:00'
   try {
     const raw =
@@ -55,7 +61,12 @@ const timezoneOptions = computed(() =>
   timezones.value.map((zone) => ({ value: zone, label: formatTimezone(zone) })),
 )
 
-function update(index: number, field: 'startTime' | 'endTime', value: string) {
+/**
+ * @param {number} index
+ * @param {'startTime' | 'endTime'} field
+ * @param {string} value
+ */
+function update(index, field, value) {
   const next = props.times.map((time, itemIndex) =>
     itemIndex === index ? { ...time, [field]: value } : time,
   )

@@ -1,24 +1,39 @@
-import type { NodeId, NodeRecord, Weekday } from './types'
+/** @typedef {import('./types.js').NodeId} NodeId */
+/** @typedef {import('./types.js').NodeRecord} NodeRecord */
+/** @typedef {import('./types.js').Weekday} Weekday */
 
-const weekdays: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+/** @type {Weekday[]} */
+const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
+/** @returns {import('./types.js').BusinessHourTime[]} */
 function businessHourTimes() {
   return weekdays.map((day) => ({ day, startTime: '09:00', endTime: '17:00' }))
 }
 
-export interface NodeDraft {
-  title?: string
-  description?: string
-}
+/**
+ * @typedef {object} NodeDraft
+ * @property {string} [title]
+ * @property {string} [description]
+ */
 
-function drafted(fallbackName: string, fallbackDescription: string, draft?: NodeDraft) {
+/**
+ * @param {string} fallbackName
+ * @param {string} fallbackDescription
+ * @param {NodeDraft} [draft]
+ */
+function drafted(fallbackName, fallbackDescription, draft) {
   return {
     name: draft?.title?.trim() || fallbackName,
     description: draft?.description?.trim() || fallbackDescription,
   }
 }
 
-function createSendMessage(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
+/**
+ * @param {NodeId} parentId
+ * @param {NodeDraft} [draft]
+ * @returns {NodeRecord[]}
+ */
+function createSendMessage(parentId, draft) {
   const content = drafted('New Message', 'Send a message to this path', draft)
   return [
     {
@@ -34,7 +49,12 @@ function createSendMessage(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
   ]
 }
 
-function createComment(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
+/**
+ * @param {NodeId} parentId
+ * @param {NodeDraft} [draft]
+ * @returns {NodeRecord[]}
+ */
+function createComment(parentId, draft) {
   const content = drafted('New Comment', 'Add an internal note', draft)
   return [
     {
@@ -50,7 +70,12 @@ function createComment(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
   ]
 }
 
-function createBusinessHours(parentId: NodeId, draft?: NodeDraft): NodeRecord[] {
+/**
+ * @param {NodeId} parentId
+ * @param {NodeDraft} [draft]
+ * @returns {NodeRecord[]}
+ */
+function createBusinessHours(parentId, draft) {
   const nodeId = crypto.randomUUID()
   const successId = crypto.randomUUID()
   const failureId = crypto.randomUUID()
@@ -86,11 +111,13 @@ function createBusinessHours(parentId: NodeId, draft?: NodeDraft): NodeRecord[] 
   ]
 }
 
-export function createNodeRecords(
-  parentId: NodeId,
-  type: 'sendMessage' | 'addComment' | 'businessHours',
-  draft?: NodeDraft,
-): NodeRecord[] {
+/**
+ * @param {NodeId} parentId
+ * @param {'sendMessage' | 'addComment' | 'businessHours'} type
+ * @param {NodeDraft} [draft]
+ * @returns {NodeRecord[]}
+ */
+export function createNodeRecords(parentId, type, draft) {
   if (type === 'sendMessage') return createSendMessage(parentId, draft)
   if (type === 'addComment') return createComment(parentId, draft)
   return createBusinessHours(parentId, draft)

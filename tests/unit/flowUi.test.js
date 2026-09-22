@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
 
 import { POSITIONS_STORAGE_KEY, useFlowUiStore } from '@/stores/flowUi'
+/** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommandMove} FlowNodeCommandMove */
 
 beforeEach(() => setActivePinia(createPinia()))
 
@@ -22,16 +23,27 @@ describe('flow UI state', () => {
   it('caps history at 50 and clears redo on a new command', () => {
     const store = useFlowUiStore()
     for (let index = 0; index < 55; index += 1)
-      store.record({ kind: 'move', nodeId: String(index), before: {}, after: {} })
+      store.record({
+        kind: 'move',
+        nodeId: String(index),
+        before: { x: 0, y: 0 },
+        after: { x: 0, y: 0 },
+      })
     expect(store.undoStack).toHaveLength(50)
     const command = store.takeUndo()
     expect(store.redoStack).toEqual([command])
-    store.record({ kind: 'move', nodeId: 'new', before: {}, after: {} })
+    store.record({
+      kind: 'move',
+      nodeId: 'new',
+      before: { x: 0, y: 0 },
+      after: { x: 0, y: 0 },
+    })
     expect(store.redoStack).toEqual([])
   })
 
   it('moves commands between undo and redo stacks', () => {
     const store = useFlowUiStore()
+    /** @type {FlowNodeCommandMove} */
     const command = { kind: 'move', nodeId: 'a', before: { x: 0, y: 0 }, after: { x: 1, y: 2 } }
     store.record(command)
     expect(store.takeUndo()).toEqual(command)

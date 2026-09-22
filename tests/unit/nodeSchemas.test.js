@@ -8,9 +8,16 @@ import {
   validateMessagePayload,
   validateUpload,
 } from '@/features/nodes/lib/nodeSchemas'
+/** @typedef {import('@/features/nodes/lib/types.js').BusinessHourTime} BusinessHourTime */
+/** @typedef {import('@/features/nodes/lib/types.js').MessagePayloadItem} MessagePayloadItem */
+/** @typedef {import('@/features/nodes/lib/types.js').Weekday} Weekday */
 
+/** @type {Weekday[]} */
+const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+/** @returns {BusinessHourTime[]} */
 const hours = () =>
-  ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day) => ({
+  weekdays.map((day) => ({
     day,
     startTime: '09:00',
     endTime: '17:00',
@@ -46,8 +53,10 @@ describe('node validation', () => {
         [],
       ),
     ).toContain('750')
+    /** @type {MessagePayloadItem[]} */
     const four = Array.from({ length: 4 }, () => ({ type: 'attachment', attachment: 'https://x' }))
     expect(validateUpload(new File(['x'], 'x.png', { type: 'image/png' }), four)).toContain('four')
+    /** @type {MessagePayloadItem[]} */
     const huge = [
       { type: 'attachment', attachment: `data:image/png;base64,${'a'.repeat(3 * 1024 * 1024)}` },
     ]

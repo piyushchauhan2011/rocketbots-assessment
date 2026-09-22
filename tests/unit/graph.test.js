@@ -14,6 +14,9 @@ import {
   X_GAP,
   Y_GAP,
 } from '@/features/flow/lib/graph'
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+
+/** @type {NodeRecord[]} */
 
 const canonical = [
   { id: 1, parentId: -1, type: 'trigger', data: {} },
@@ -48,11 +51,12 @@ describe('graph utilities', () => {
   })
 
   it('treats invalid parents and cycles as roots without hanging', () => {
+    /** @type {NodeRecord[]} */
     const malformed = [
       ...canonical,
-      { id: 'orphan', parentId: 'missing' },
-      { id: 'a', parentId: 'b' },
-      { id: 'b', parentId: 'a' },
+      { id: 'orphan', parentId: 'missing', type: 'addComment', data: {} },
+      { id: 'a', parentId: 'b', type: 'addComment', data: {} },
+      { id: 'b', parentId: 'a', type: 'addComment', data: {} },
     ]
     const positions = layoutGraph(malformed)
     expect(Object.keys(positions)).toHaveLength(malformed.length)
@@ -71,10 +75,11 @@ describe('graph utilities', () => {
   })
 
   it('collects every descendant once even with a cycle', () => {
+    /** @type {NodeRecord[]} */
     const cyclic = [
       ...canonical,
-      { id: 'loop', parentId: 'message' },
-      { id: 'message', parentId: 'loop' },
+      { id: 'loop', parentId: 'message', type: 'addComment', data: {} },
+      { id: 'message', parentId: 'loop', type: 'sendMessage', data: {} },
     ]
     expect(new Set(getDescendantIds(cyclic, 1))).toEqual(
       new Set(['hours', 'success', 'message', 'loop']),
@@ -92,6 +97,7 @@ describe('graph utilities', () => {
 })
 
 describe('nextNodeId', () => {
+  /** @type {NodeRecord[]} */
   const branched = [
     ...canonical,
     {
@@ -115,6 +121,7 @@ describe('nextNodeId', () => {
 
 describe('removeNode', () => {
   it('reconnects the child to the deleted step parent', () => {
+    /** @type {NodeRecord[]} */
     const withMid = spliceNodes(canonical, 'success', [
       { id: 'mid', parentId: 'success', type: 'sendMessage', name: 'good good', data: {} },
     ])
@@ -142,6 +149,7 @@ describe('positionsForAddedNodes', () => {
 
   it('places a new node from its parent and leaves saved nodes alone', () => {
     const saved = layoutGraph(canonical)
+    /** @type {NodeRecord[]} */
     const records = [
       ...canonical,
       { id: 'note', parentId: 'success', type: 'addComment', name: 'Note', data: {} },
@@ -153,6 +161,7 @@ describe('positionsForAddedNodes', () => {
   })
 
   it('shifts a new node aside when its slot is already taken', () => {
+    /** @type {NodeRecord[]} */
     const records = [
       { id: '1', parentId: -1, type: 'trigger', data: {} },
       { id: 'inserted', parentId: '1', type: 'addComment', data: {} },
@@ -169,6 +178,7 @@ describe('positionsForAddedNodes', () => {
 
 describe('spliceNodes', () => {
   it('splices a step between a parent and its current child', () => {
+    /** @type {NodeRecord[]} */
     const created = [{ id: 'mid', parentId: 1, type: 'sendMessage', name: 'Mid', data: {} }]
     const next = spliceNodes(canonical, '1', created)
     expect(next.find((node) => node.id === 'hours').parentId).toBe('mid')
@@ -176,6 +186,7 @@ describe('spliceNodes', () => {
   })
 
   it('keeps the previous branch on the success path of inserted hours', () => {
+    /** @type {NodeRecord[]} */
     const created = [
       { id: 'hours2', parentId: 1, type: 'dateTime', data: {} },
       { id: 'ok', parentId: 'hours2', type: 'dateTimeConnector', data: {} },

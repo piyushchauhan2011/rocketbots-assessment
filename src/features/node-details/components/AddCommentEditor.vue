@@ -1,10 +1,13 @@
-<script setup lang="ts">
+<script setup>
 import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-defineProps<{ modelValue: string; error?: string }>()
-defineEmits<{ 'update:modelValue': [value: string] }>()
+defineProps({
+  modelValue: { type: String, required: true },
+  error: { type: String, default: undefined },
+})
+defineEmits(['update:modelValue'])
 </script>
 
 <template>

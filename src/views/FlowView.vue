@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { Redo2, RotateCcw, Undo2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -18,19 +18,25 @@ import {
 import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
 import CreateNodeDialog from '@/features/nodes/components/CreateNodeDialog.vue'
 import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
-import { createNodeRecords, type NodeDraft } from '@/features/nodes/lib/createNodeRecords'
-import type { FlowNodeCommand, NodeRecord } from '@/features/nodes/lib/types'
+import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
 import { useFlowUiStore } from '@/stores/flowUi'
+
+/** @typedef {import('@/features/nodes/lib/createNodeRecords.js').NodeDraft} NodeDraft */
+/** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {'sendMessage' | 'addComment' | 'businessHours'} CreateNodeType */
+/** @typedef {{ focusNode: (nodeId: string) => Promise<void>, revealNode: (nodeId: string) => Promise<void> }} FlowCanvasSurface */
 
 const route = useRoute()
 const router = useRouter()
-const canvas = ref(null)
-const canvasElement = ref(null)
-const createParentId = ref<string | null>(null)
+const canvas = ref(/** @type {FlowCanvasSurface | null} */ (null))
+const canvasElement = ref(/** @type {HTMLElement | null} */ (null))
+const createParentId = ref(/** @type {string | null} */ (null))
 const store = useFlowUiStore()
 const { canUndo, canRedo, undo, redo } = useFlowHistory()
 
-async function runHistory(action: () => Promise<FlowNodeCommand | null>) {
+/** @param {() => Promise<FlowNodeCommand | null>} action */
+async function runHistory(action) {
   const command = await action()
   if (command?.kind !== 'move') return
   store.focusNode(command.nodeId)
@@ -46,23 +52,26 @@ function redoHistory() {
 useFlowShortcuts({ undo: undoHistory, redo: redoHistory })
 const query = useNodesQuery()
 const replaceMutation = useReplaceNodesMutation()
-const records = computed<NodeRecord[]>(() => query.data.value || [])
+const records = computed(/** @returns {NodeRecord[]} */ () => query.data.value || [])
 
-function openNode(nodeId: string) {
+/** @param {string} nodeId */
+function openNode(nodeId) {
   const sameNode = route.name === 'node-details' && String(route.params.nodeId) === String(nodeId)
   router.push(
     sameNode ? { name: 'flow' } : { name: 'node-details', params: { nodeId: String(nodeId) } },
   )
 }
-function restoreFocus(nodeId: string | null) {
+/** @param {string | null} nodeId */
+function restoreFocus(nodeId) {
   if (records.value.some((record) => String(record.id) === String(nodeId))) {
-    canvas.value?.focusNode(nodeId)
+    if (nodeId !== null) canvas.value?.focusNode(nodeId)
   } else {
     canvasElement.value?.focus()
   }
 }
 
-function openCreate(parentId: string) {
+/** @param {string} parentId */
+function openCreate(parentId) {
   createParentId.value = parentId
 }
 function closeCreate() {
@@ -76,11 +85,12 @@ const parentHasChild = computed(() =>
   records.value.some((record) => String(record.parentId) === String(insertParent.value?.id)),
 )
 
-async function createNode(
-  parentId: string,
-  type: 'sendMessage' | 'addComment' | 'businessHours',
-  draft?: NodeDraft,
-) {
+/**
+ * @param {string} parentId
+ * @param {CreateNodeType} type
+ * @param {NodeDraft} [draft]
+ */
+async function createNode(parentId, type, draft) {
   const created = createNodeRecords(parentId, type, draft)
   const previous = { ...store.positions }
   store.setPositions(missingLayoutPositions(records.value, store.positions))
@@ -95,11 +105,12 @@ async function createNode(
   } catch (error) {
     store.removePositions(created.map((record) => record.id))
     store.setPositions(previous)
-    toast.error((error as Error).message)
+    toast.error(error instanceof Error ? error.message : String(error))
   }
 }
 
-function submitCreate(draft: NodeDraft & { type: 'sendMessage' | 'addComment' | 'businessHours' }) {
+/** @param {NodeDraft & { type: CreateNodeType }} draft */
+function submitCreate(draft) {
   const parent = insertParent.value
   if (!parent) return
   createNode(String(parent.id), draft.type, draft)

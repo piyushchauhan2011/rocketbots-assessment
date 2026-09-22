@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
@@ -20,26 +20,41 @@ import {
   getBusinessHoursValidation,
   TITLE_MAX,
   validateMessagePayload,
-  type BusinessHoursValidation,
 } from '@/features/nodes/lib/nodeSchemas'
-import type { BusinessHourTime, MessagePayloadItem, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 import AddCommentEditor from './AddCommentEditor.vue'
 import BusinessHoursEditor from './BusinessHoursEditor.vue'
 import SendMessageEditor from './SendMessageEditor.vue'
 
-const props = defineProps<{ records: NodeRecord[] }>()
-const emit = defineEmits<{ closed: [nodeId: string | null] }>()
+/** @typedef {import('@/features/nodes/lib/nodeSchemas.js').BusinessHoursValidation} BusinessHoursValidation */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeKind} NodeKind */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {{ name: string, data: NodeRecord['data'] }} DraftValue */
+/**
+ * @typedef {object} DraftValidation
+ * @property {string} [form]
+ * @property {string} [title]
+ * @property {string} [description]
+ * @property {string} [message]
+ * @property {string} [comment]
+ * @property {string} [timezone]
+ * @property {BusinessHoursValidation} businessHours
+ */
+
+const props = /** @type {{ records: NodeRecord[] }} */ (
+  defineProps({ records: { type: Array, required: true } })
+)
+const emit = defineEmits(['closed'])
 const route = useRoute()
 const router = useRouter()
 const store = useFlowUiStore()
 const updateMutation = useUpdateNodeMutation()
 const replaceMutation = useReplaceNodesMutation()
-const draft = ref<{ name: string; data: Record<string, unknown> } | null>(null)
+const draft = ref(/** @type {DraftValue | null} */ (null))
 const originalDraft = ref('')
-const confirmMode = ref<'dirty' | 'delete' | 'leaving' | null>(null)
-const pendingRoute = ref<string | null>(null)
+const confirmMode = ref(/** @type {'dirty' | 'delete' | 'leaving' | null} */ (null))
+const pendingRoute = ref(/** @type {string | null} */ (null))
 
 const routeId = computed(() => (route.params.nodeId ? String(route.params.nodeId) : null))
 const record = computed(() => props.records.find((item) => String(item.id) === routeId.value))
@@ -104,31 +119,31 @@ const headerMeta = computed(() => {
   }
 })
 
-function copy<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
+/**
+ * @template T
+ * @param {T} value
+ * @returns {T}
+ */
+function copy(value) {
+  return /** @type {T} */ (JSON.parse(JSON.stringify(value)))
 }
 
-function makeDraft(source: NodeRecord) {
+/** @param {NodeRecord} source @returns {DraftValue} */
+function makeDraft(source) {
   const data = copy(source.data || {})
   data.description = data.description || getNodeSummary(source)
   if (source.type === 'sendMessage') data.payload = data.payload || []
   if (source.type === 'addComment') data.comment = data.comment || ''
   return { name: source.name || '', data }
 }
-type DraftValue = { name: string; data: Record<string, unknown> }
 
-interface DraftValidation {
-  form?: string
-  title?: string
-  description?: string
-  message?: string
-  comment?: string
-  timezone?: string
-  businessHours: BusinessHoursValidation
-}
-
-function validateCommonDraft(value: DraftValue): Pick<DraftValidation, 'title' | 'description'> {
-  const errors: Pick<DraftValidation, 'title' | 'description'> = {}
+/**
+ * @param {DraftValue} value
+ * @returns {Pick<DraftValidation, 'title' | 'description'>}
+ */
+function validateCommonDraft(value) {
+  /** @type {Pick<DraftValidation, 'title' | 'description'>} */
+  const errors = {}
   const title = value.name.trim()
   const description = String(value.data.description || '').trim()
   if (!title) errors.title = 'Title is required'
@@ -140,17 +155,18 @@ function validateCommonDraft(value: DraftValue): Pick<DraftValidation, 'title' |
   return errors
 }
 
+/** @type {Partial<Record<NodeKind, (value: DraftValue) => Partial<DraftValidation>>>} */
 const TYPE_VALIDATORS = {
-  sendMessage: (value: DraftValue) => ({
-    message: validateMessagePayload(value.data.payload as MessagePayloadItem[]) || undefined,
+  sendMessage: (value) => ({
+    message: validateMessagePayload(value.data.payload || []) || undefined,
   }),
-  addComment: (value: DraftValue) => {
+  addComment: (value) => {
     const comment = String(value.data.comment || '').trim()
     if (!comment) return { comment: 'Comment is required' }
     if (comment.length > 1000) return { comment: 'Comment must be 1000 characters or less' }
     return {}
   },
-  dateTime: (value: DraftValue) => {
+  dateTime: (value) => {
     const zones = new Set([
       'UTC',
       'Asia/Kuala_Lumpur',
@@ -158,26 +174,28 @@ const TYPE_VALIDATORS = {
     ])
     return {
       timezone: zones.has(String(value.data.timezone)) ? undefined : 'Choose an available timezone',
-      businessHours: getBusinessHoursValidation(value.data.times as BusinessHourTime[]),
+      businessHours: getBusinessHoursValidation(value.data.times || []),
     }
   },
 }
 
-function validateDraft(value: DraftValue | null): DraftValidation {
+/** @param {DraftValue | null} value @returns {DraftValidation} */
+function validateDraft(value) {
   if (!value) {
     return {
       form: 'Node data is unavailable',
       businessHours: { rowErrors: [], firstError: null },
     }
   }
+  const validator = record.value ? TYPE_VALIDATORS[record.value.type] : undefined
   return {
     businessHours: { rowErrors: [], firstError: null },
     ...validateCommonDraft(value),
-    ...TYPE_VALIDATORS[record.value?.type]?.(value),
+    ...validator?.(value),
   }
 }
 function resetDraft() {
-  if (!editable.value) {
+  if (!editable.value || !record.value) {
     draft.value = null
     originalDraft.value = ''
     return
@@ -230,22 +248,24 @@ function discardAndLeave() {
   })
 }
 async function save() {
-  if (!canSave.value) return
+  if (!canSave.value || !record.value || !draft.value) return
   const beforeRecord = copy(record.value)
   const afterRecord = {
     ...beforeRecord,
     name: draft.value.name.trim(),
     data: copy(draft.value.data),
   }
-  afterRecord.data.description = afterRecord.data.description.trim()
-  if (afterRecord.type === 'addComment') afterRecord.data.comment = afterRecord.data.comment.trim()
+  afterRecord.data.description = String(afterRecord.data.description).trim()
+  if (afterRecord.type === 'addComment') {
+    afterRecord.data.comment = String(afterRecord.data.comment).trim()
+  }
   try {
     await updateMutation.mutateAsync(afterRecord)
     store.record({ kind: 'update', nodeId: String(afterRecord.id), beforeRecord, afterRecord })
     originalDraft.value = JSON.stringify(draft.value)
     toast.success('Node saved')
   } catch (error) {
-    toast.error((error as Error).message)
+    toast.error(error instanceof Error ? error.message : String(error))
   }
 }
 function requestDelete() {
@@ -266,7 +286,7 @@ async function deleteNode() {
     store.removePositions(next.removedIds)
     toast.success(`${name} deleted`)
   } catch (error) {
-    toast.error((error as Error).message)
+    toast.error(error instanceof Error ? error.message : String(error))
   } finally {
     confirmMode.value = null
   }

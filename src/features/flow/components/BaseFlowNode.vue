@@ -1,27 +1,34 @@
-<script setup lang="ts">
+<script setup>
 import { Handle, Position } from '@vue-flow/core'
 import { Clock3, MessageSquare, MessageSquareText, Plus, Play, Split } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import { Card } from '@/components/ui/card'
-import type { NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
+
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {'up' | 'down' | 'left' | 'right'} MoveDirection */
+/**
+ * @typedef {object} FlowNodeData
+ * @property {NodeRecord} record
+ * @property {string} summary
+ * @property {boolean} hasChildren
+ * @property {(nodeId: string) => void} [onOpen]
+ * @property {(parentId: string) => void} [onAdd]
+ * @property {(nodeId: string, direction: MoveDirection) => void} [onMove]
+ */
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps<{
-  id: string
-  data: {
-    record: NodeRecord
-    summary: string
-    hasChildren: boolean
-    onOpen?: (nodeId: string) => void
-    onAdd?: (parentId: string) => void
-    onMove?: (nodeId: string, direction: 'up' | 'down' | 'left' | 'right') => void
-  }
-  selected: boolean
-  nodeType: string
-}>()
+const props =
+  /** @type {{ id: string, data: FlowNodeData, selected: boolean, nodeType: string }} */ (
+    defineProps({
+      id: { type: String, required: true },
+      data: { type: Object, required: true },
+      selected: { type: Boolean, required: true },
+      nodeType: { type: String, required: true },
+    })
+  )
 
 const config = computed(() => {
   const type = props.nodeType
@@ -46,7 +53,8 @@ const highlighted = computed(() => props.selected || store.focusedNodeId === pro
 const tabStop = computed(
   () => store.focusedNodeId === props.id || (!store.focusedNodeId && props.nodeType === 'trigger'),
 )
-const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' } as const
+/** @type {Record<string, MoveDirection>} */
+const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
 
 function activate() {
   if (editable.value) props.data.onOpen?.(props.id)
@@ -57,8 +65,9 @@ function requestCreate() {
 function rememberFocus() {
   if (store.focusedNodeId !== props.id) store.focusNode(props.id)
 }
-function onArrows(event: KeyboardEvent) {
-  const direction = arrows[event.key as keyof typeof arrows]
+/** @param {KeyboardEvent} event */
+function onArrows(event) {
+  const direction = arrows[event.key]
   if (!direction) return
   event.preventDefault()
   event.stopPropagation()

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
-import type { BusinessHourTime, MessagePayloadItem } from './types'
+/** @typedef {import('./types.js').BusinessHourTime} BusinessHourTime */
+/** @typedef {import('./types.js').MessagePayloadItem} MessagePayloadItem */
 
 export const TITLE_MAX = 80
 export const DESCRIPTION_MAX = 240
@@ -25,14 +26,23 @@ export const createNodeSchema = z.object({
   }),
 })
 
-export function validateMessagePayload(payload: MessagePayloadItem[]) {
+/**
+ * @param {MessagePayloadItem[]} payload
+ * @returns {string | null}
+ */
+export function validateMessagePayload(payload) {
   const hasContent = payload.some(
     (item) => item.type === 'attachment' || (item.type === 'text' && item.text?.trim()),
   )
   return hasContent ? null : 'Add at least one message or attachment'
 }
 
-export function validateUpload(file: File, payload: MessagePayloadItem[]) {
+/**
+ * @param {File} file
+ * @param {MessagePayloadItem[]} payload
+ * @returns {string | null}
+ */
+export function validateUpload(file, payload) {
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return 'Use a JPEG, PNG, WebP, or GIF image'
   if (file.size > MAX_ATTACHMENT_BYTES) return 'Each attachment must be 750 KiB or smaller'
   const attachments = payload.filter((item) => item.type === 'attachment')
@@ -49,26 +59,34 @@ export function validateUpload(file: File, payload: MessagePayloadItem[]) {
 
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/
 
-export interface BusinessHourRowErrors {
-  startTime?: string
-  endTime?: string
-  range?: string
-}
+/**
+ * @typedef {object} BusinessHourRowErrors
+ * @property {string} [startTime]
+ * @property {string} [endTime]
+ * @property {string} [range]
+ */
 
-export interface BusinessHoursValidation {
-  formError?: string
-  rowErrors: BusinessHourRowErrors[]
-  firstError: string | null
-}
+/**
+ * @typedef {object} BusinessHoursValidation
+ * @property {string} [formError]
+ * @property {BusinessHourRowErrors[]} rowErrors
+ * @property {string | null} firstError
+ */
 
-export function getBusinessHoursValidation(times: BusinessHourTime[]): BusinessHoursValidation {
+/**
+ * @param {BusinessHourTime[]} times
+ * @returns {BusinessHoursValidation}
+ */
+export function getBusinessHoursValidation(times) {
   if (!Array.isArray(times)) {
     const formError = 'Business hours require seven weekdays'
     return { formError, rowErrors: [], firstError: formError }
   }
 
-  const messages: string[] = []
-  let formError: string | undefined
+  /** @type {string[]} */
+  const messages = []
+  /** @type {string | undefined} */
+  let formError
   if (times.length !== 7) {
     formError = 'Business hours require seven weekdays'
     messages.push(formError)
@@ -76,7 +94,8 @@ export function getBusinessHoursValidation(times: BusinessHourTime[]): BusinessH
 
   const days = new Set()
   const rowErrors = times.map((time) => {
-    const errors: BusinessHourRowErrors = {}
+    /** @type {BusinessHourRowErrors} */
+    const errors = {}
     const validStart = TIME_PATTERN.test(time.startTime || '')
     const validEnd = TIME_PATTERN.test(time.endTime || '')
 
@@ -104,6 +123,10 @@ export function getBusinessHoursValidation(times: BusinessHourTime[]): BusinessH
   return { formError, rowErrors, firstError: messages[0] ?? null }
 }
 
-export function validateBusinessHours(times: BusinessHourTime[]) {
+/**
+ * @param {BusinessHourTime[]} times
+ * @returns {string | null}
+ */
+export function validateBusinessHours(times) {
   return getBusinessHoursValidation(times).firstError
 }
