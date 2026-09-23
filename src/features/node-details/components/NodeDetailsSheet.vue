@@ -1,5 +1,5 @@
 <script setup>
-import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from 'lucide-vue-next'
+import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from '@lucide/vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

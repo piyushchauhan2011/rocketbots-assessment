@@ -1,5 +1,5 @@
 <script setup>
-import { Redo2, RotateCcw, Undo2 } from 'lucide-vue-next'
+import { Redo2, RotateCcw, Undo2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

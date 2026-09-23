@@ -1,0 +1,15 @@
+{
+  "extends": "./jsconfig.json",
+  "compilerOptions": {
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": [
+    "src/features/**/*.js",
+    "src/stores/**/*.js",
+    "src/lib/**/*.js",
+    "tests/unit/**/*.js",
+    "tests/e2e/**/*.js",
+    "tests/setup.js",
+    "*.js"
+  ]
+}

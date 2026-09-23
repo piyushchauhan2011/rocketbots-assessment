@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown } from '@lucide/vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 /** @typedef {{ value: string, label: string }} SelectOption */

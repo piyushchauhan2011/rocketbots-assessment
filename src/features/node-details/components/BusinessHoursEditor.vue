@@ -1,5 +1,5 @@
 <script setup>
-import { CalendarDays, Clock3 } from 'lucide-vue-next'
+import { CalendarDays, Clock3 } from '@lucide/vue'
 import { computed } from 'vue'
 
 import { FieldError } from '@/components/ui/field-error'

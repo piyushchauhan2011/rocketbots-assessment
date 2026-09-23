@@ -1,5 +1,5 @@
 <script setup>
-import { ImagePlus, Plus, Trash2 } from 'lucide-vue-next'
+import { ImagePlus, Plus, Trash2 } from '@lucide/vue'
 import { ref } from 'vue'
 
 import { Button } from '@/components/ui/button'
