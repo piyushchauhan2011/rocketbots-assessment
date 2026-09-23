@@ -27,6 +27,8 @@ jobs:
         run: pnpm lint
       - name: Typecheck checked JavaScript
         run: pnpm typecheck
+      - name: Generate API documentation
+        run: pnpm docs:build
       - name: Unit and integration coverage
         run: pnpm test:unit:coverage
       - name: Publish coverage report
