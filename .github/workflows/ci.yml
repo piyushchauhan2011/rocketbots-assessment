@@ -35,7 +35,7 @@ jobs:
         with:
           file-coverage-mode: all
           sort-by: lines-asc
-      - name: Build
+      - name: Build and enforce bundle budgets
         run: pnpm build
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium

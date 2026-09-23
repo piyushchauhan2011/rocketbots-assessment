@@ -33,9 +33,13 @@ pnpm test:unit                 # Vitest unit and integration tests
 pnpm test:unit:coverage        # Vitest with enforced coverage thresholds
 pnpm exec playwright install chromium
 pnpm test:e2e                  # Cucumber desktop/mobile scenarios using Playwright
-pnpm build                     # Production bundle
+pnpm build                     # Production bundle with enforced size budgets
+pnpm bundle:check              # Recheck an existing dist bundle
 pnpm preview --host 127.0.0.1 # Local production preview
 ```
+
+`pnpm build` generates Vite’s manifest and fails if `bundle-budgets.json` limits are exceeded. Budgets cover initial-route JavaScript, total JavaScript, the largest JavaScript chunk, and total CSS in both raw and gzip bytes.
+The initial-route measurement starts from `initialEntries` and recursively includes their static manifest imports; action-driven dynamic chunks remain outside that budget but count toward total JavaScript and the per-chunk ceiling. Adjust limits deliberately in the budget file when an accepted product change needs additional headroom.
 
 ## Architecture
 
