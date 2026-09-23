@@ -295,7 +295,7 @@ async function deleteNode() {
 
 <template>
   <div class="pointer-events-none fixed inset-0 z-40">
-    <Transition name="flow-sheet-backdrop">
+    <Transition name="flow-sheet-backdrop" appear>
       <button
         v-if="open"
         class="pointer-events-auto absolute inset-0 bg-black/35"
@@ -303,7 +303,7 @@ async function deleteNode() {
         @click="requestClose"
       />
     </Transition>
-    <Transition name="flow-sheet-panel">
+    <Transition name="flow-sheet-panel" appear>
       <aside
         v-if="open"
         class="sheet pointer-events-auto absolute top-0 right-0 flex h-full w-full max-w-[520px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"

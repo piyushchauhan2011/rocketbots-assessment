@@ -1,6 +1,6 @@
 <script setup>
 import { Redo2, RotateCcw, Undo2 } from '@lucide/vue'
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -37,6 +37,13 @@ const canvas = ref(/** @type {FlowCanvasSurface | null} */ (null))
 const canvasElement = ref(/** @type {HTMLElement | null} */ (null))
 const createParentId = ref(/** @type {string | null} */ (null))
 const shouldLoadCanvas = ref(false)
+const shouldLoadNodeDetails = ref(route.name === 'node-details')
+watch(
+  () => route.name,
+  (name) => {
+    if (name === 'node-details') shouldLoadNodeDetails.value = true
+  },
+)
 /** @type {IntersectionObserver | null} */
 let canvasObserver = null
 let cancelCanvasLoad = () => {}
@@ -245,7 +252,7 @@ function submitCreate(draft) {
       </div>
     </main>
     <NodeDetailsSheet
-      v-if="query.isSuccess.value && route.name === 'node-details'"
+      v-if="query.isSuccess.value && shouldLoadNodeDetails"
       :records="records"
       @closed="restoreFocus"
     />
