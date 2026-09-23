@@ -52,7 +52,9 @@ describe('flow UI state', () => {
     store.focusNode(4)
     expect(store.focusedNodeId).toBe('4')
   })
+})
 
+describe('flow UI history snapshots', () => {
   it('copies reactive move coordinates into a plain command', () => {
     const store = useFlowUiStore()
     const before = reactive({ x: 12, y: 24 })
@@ -62,6 +64,35 @@ describe('flow UI state', () => {
       nodeId: 'dragged',
       before: { x: 12, y: 24 },
       after: { x: 40, y: 24 },
+    })
+  })
+
+  it('snapshots update commands so later draft edits cannot rewrite history', () => {
+    const store = useFlowUiStore()
+    const afterRecord = reactive({
+      id: 'message',
+      parentId: 'root',
+      type: /** @type {'sendMessage'} */ ('sendMessage'),
+      data: { payload: [{ type: /** @type {'text'} */ ('text'), text: 'Saved' }] },
+    })
+    store.record({
+      kind: 'update',
+      nodeId: 'message',
+      beforeRecord: {
+        id: 'message',
+        parentId: 'root',
+        type: 'sendMessage',
+        data: { payload: [{ type: 'text', text: 'Before' }] },
+      },
+      afterRecord,
+    })
+
+    afterRecord.data.payload[0].text = 'Changed after save'
+    const command = store.undoStack[0]
+    if (command?.kind !== 'update') throw new Error('Expected update history')
+    expect(command.afterRecord.data.payload?.[0]).toEqual({
+      type: 'text',
+      text: 'Saved',
     })
   })
 })

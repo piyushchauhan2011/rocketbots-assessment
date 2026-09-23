@@ -44,7 +44,9 @@ describe('node validation', () => {
     expect(validateMessagePayload([{ type: 'text', text: ' ' }])).toContain('at least one')
     expect(validateMessagePayload([{ type: 'attachment', attachment: 'x' }])).toBeNull()
   })
+})
 
+describe('node payload validation', () => {
   it('validates upload type, size, count, and encoded total', () => {
     expect(validateUpload(new File(['x'], 'x.txt', { type: 'text/plain' }), [])).toContain('JPEG')
     expect(
@@ -61,6 +63,7 @@ describe('node validation', () => {
       { type: 'attachment', attachment: `data:image/png;base64,${'a'.repeat(3 * 1024 * 1024)}` },
     ]
     expect(validateUpload(new File(['x'], 'x.png', { type: 'image/png' }), huge)).toContain('3 MiB')
+    expect(validateUpload(new File(['x'], 'x.png', { type: 'image/png' }), [])).toBeNull()
   })
 
   it('validates all business hour invariants', () => {
@@ -80,5 +83,15 @@ describe('node validation', () => {
     duplicate[1].day = 'mon'
     expect(validateBusinessHours(duplicate)).toContain('once')
     expect(validateBusinessHours(hours().slice(1))).toContain('seven')
+    expect(getBusinessHoursValidation(/** @type {never} */ (null))).toEqual({
+      formError: 'Business hours require seven weekdays',
+      rowErrors: [],
+      firstError: 'Business hours require seven weekdays',
+    })
+    const invalidEnd = hours()
+    invalidEnd[0].endTime = '17:99'
+    expect(getBusinessHoursValidation(invalidEnd).rowErrors[0]).toEqual({
+      endTime: 'Enter a valid end time',
+    })
   })
 })
