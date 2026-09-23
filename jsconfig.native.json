@@ -11,5 +11,6 @@
     "tests/e2e/**/*.js",
     "tests/setup.js",
     "*.js"
-  ]
+  ],
+  "exclude": ["src/**/*.stories.js"]
 }

@@ -90,7 +90,7 @@ function onArrows(event) {
       @click.stop
       @keydown="onArrows"
     >
-      <div class="rounded-full bg-[#3b82f6] px-4 py-1.5 text-sm font-medium text-white shadow-sm">
+      <div class="rounded-full bg-[#2563eb] px-4 py-1.5 text-sm font-medium text-white shadow-sm">
         {{ title }}
       </div>
     </button>

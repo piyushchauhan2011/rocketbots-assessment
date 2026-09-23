@@ -29,6 +29,8 @@ jobs:
         run: pnpm typecheck
       - name: Generate API documentation
         run: pnpm docs:build
+      - name: Build Storybook
+        run: pnpm storybook:build
       - name: Unit and integration coverage
         run: pnpm test:unit:coverage
       - name: Publish coverage report

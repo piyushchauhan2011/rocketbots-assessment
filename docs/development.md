@@ -8,6 +8,8 @@
 | `pnpm build`                            | Build production assets and enforce bundle budgets           |
 | `pnpm preview --host 127.0.0.1`         | Preview the production build with the payload proxy          |
 | `pnpm docs:build`                       | Generate TypeDoc guides and API reference in `docs/api/`     |
+| `pnpm storybook`                        | Start the component workshop on port 6006                    |
+| `pnpm storybook:build`                  | Build the static component workshop in `storybook-static/`   |
 | `pnpm format`                           | Apply Oxfmt                                                  |
 | `pnpm format:check`                     | Verify formatting without changes                            |
 | `pnpm lint`                             | Run Oxlint with warnings denied                              |
@@ -17,6 +19,12 @@
 | `pnpm exec playwright install chromium` | Install the E2E browser                                      |
 | `pnpm test:e2e`                         | Run Cucumber scenarios through Playwright                    |
 | `pnpm bundle:check`                     | Recheck an existing `dist` bundle                            |
+
+## Component workshop
+
+Storybook documents reusable UI primitives and the main flow-editing surfaces in isolation. Run `pnpm storybook`, then open [http://localhost:6006](http://localhost:6006).
+
+Stories live beside the components they describe. Prefer realistic assessment records and controlled wrappers for editable values. Every new reusable component or materially distinct state should add a story; transient implementation helpers do not need one. The accessibility addon runs checks from Storybook's **Accessibility** panel.
 
 ## Editing behavior
 

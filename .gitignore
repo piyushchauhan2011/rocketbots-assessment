@@ -7,3 +7,4 @@ cucumber-report.html
 bundle-budget-report.md
 .DS_Store
 docs/api/
+storybook-static/
