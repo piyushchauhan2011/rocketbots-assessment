@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src/features/flow/lib",
+    "src/features/nodes/api",
+    "src/features/nodes/composables",
+    "src/features/nodes/lib",
+    "src/features/flow/composables",
+    "src/stores"
+  ],
+  "entryPointStrategy": "expand",
+  "tsconfig": "jsconfig.native.json",
+  "out": "docs/api",
+  "name": "Rocketbots Flow Builder",
+  "readme": "docs/index.md",
+  "projectDocuments": [
+    "docs/quick-start.md",
+    "docs/architecture.md",
+    "docs/design-decisions.md",
+    "docs/development.md"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "includeVersion": true,
+  "ignoredHighlightLanguages": ["mermaid"],
+  "githubPages": false
+}
