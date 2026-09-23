@@ -1,6 +1,6 @@
 <script setup>
 import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from '@lucide/vue'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -23,9 +23,9 @@ import {
 } from '@/features/nodes/lib/nodeSchemas'
 import { useFlowUiStore } from '@/stores/flowUi'
 
-import AddCommentEditor from './AddCommentEditor.vue'
-import BusinessHoursEditor from './BusinessHoursEditor.vue'
-import SendMessageEditor from './SendMessageEditor.vue'
+const AddCommentEditor = defineAsyncComponent(() => import('./AddCommentEditor.vue'))
+const BusinessHoursEditor = defineAsyncComponent(() => import('./BusinessHoursEditor.vue'))
+const SendMessageEditor = defineAsyncComponent(() => import('./SendMessageEditor.vue'))
 
 /** @typedef {import('@/features/nodes/lib/nodeSchemas.js').BusinessHoursValidation} BusinessHoursValidation */
 /** @typedef {import('@/features/nodes/lib/types.js').NodeKind} NodeKind */
