@@ -1,3 +1,4 @@
+import { Result } from 'neverthrow'
 import { defineStore } from 'pinia'
 
 /** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
@@ -33,13 +34,12 @@ function cloneCommand(command) {
 
 /** @returns {Record<string, Position>} */
 function loadPositions() {
-  try {
-    return /** @type {Record<string, Position>} */ (
-      JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}')
-    )
-  } catch {
-    return {}
-  }
+  return Result.fromThrowable(
+    () =>
+      /** @type {Record<string, Position>} */ (
+        JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}')
+      ),
+  )().unwrapOr({})
 }
 
 export const useFlowUiStore = defineStore('flow-ui', {

@@ -259,14 +259,14 @@ async function save() {
   if (afterRecord.type === 'addComment') {
     afterRecord.data.comment = String(afterRecord.data.comment).trim()
   }
-  try {
-    await updateMutation.mutateAsync(afterRecord)
-    store.record({ kind: 'update', nodeId: String(afterRecord.id), beforeRecord, afterRecord })
-    originalDraft.value = JSON.stringify(draft.value)
-    toast.success('Node saved')
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : String(error))
+  const result = await updateMutation.mutateAsync(afterRecord)
+  if (result.isErr()) {
+    toast.error(result.error.message)
+    return
   }
+  store.record({ kind: 'update', nodeId: String(afterRecord.id), beforeRecord, afterRecord })
+  originalDraft.value = JSON.stringify(draft.value)
+  toast.success('Node saved')
 }
 function requestDelete() {
   confirmMode.value = 'delete'
@@ -281,15 +281,14 @@ async function deleteNode() {
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
   store.setPositions(missingLayoutPositions(props.records, store.positions))
-  try {
-    await replaceMutation.mutateAsync(next.records)
+  const result = await replaceMutation.mutateAsync(next.records)
+  if (result.isErr()) {
+    toast.error(result.error.message)
+  } else {
     store.removePositions(next.removedIds)
     toast.success(`${name} deleted`)
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : String(error))
-  } finally {
-    confirmMode.value = null
   }
+  confirmMode.value = null
 }
 </script>
 

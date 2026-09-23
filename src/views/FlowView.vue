@@ -67,7 +67,19 @@ function redoHistory() {
 useFlowShortcuts({ undo: undoHistory, redo: redoHistory })
 const query = useNodesQuery()
 const replaceMutation = useReplaceNodesMutation()
-const records = computed(/** @returns {NodeRecord[]} */ () => query.data.value || [])
+const queryFailure = computed(() => {
+  const result = query.data.value
+  if (result?.isErr()) return result.error
+  const unexpected = query.error.value
+  if (!unexpected) return null
+  return { message: unexpected instanceof Error ? unexpected.message : String(unexpected) }
+})
+const records = computed(
+  /** @returns {NodeRecord[]} */ () => {
+    const result = query.data.value
+    return result?.isOk() ? result.value : []
+  },
+)
 function scheduleCanvasLoad() {
   if (typeof window.requestIdleCallback === 'function') {
     const handle = window.requestIdleCallback(() => (shouldLoadCanvas.value = true), {
@@ -143,17 +155,17 @@ async function createNode(parentId, type, draft) {
   store.setPositions(missingLayoutPositions(records.value, store.positions))
   const next = spliceNodes(records.value, parentId, created)
   store.setPositions(positionsForAddedNodes(next, store.positions))
-  try {
-    await replaceMutation.mutateAsync(next)
-    closeCreate()
-    openNode(String(created[0].id))
-    await canvas.value?.revealNode(String(created[0].id))
-    toast.success(`${created[0].name || 'Node'} created`)
-  } catch (error) {
+  const result = await replaceMutation.mutateAsync(next)
+  if (result.isErr()) {
     store.removePositions(created.map((record) => record.id))
     store.setPositions(previous)
-    toast.error(error instanceof Error ? error.message : String(error))
+    toast.error(result.error.message)
+    return
   }
+  closeCreate()
+  openNode(String(created[0].id))
+  await canvas.value?.revealNode(String(created[0].id))
+  toast.success(`${created[0].name || 'Node'} created`)
 }
 
 /** @param {NodeDraft & { type: CreateNodeType }} draft */
@@ -198,7 +210,7 @@ function submitCreate(draft) {
       <p id="flow-keyboard-help" class="sr-only">
         Arrow keys move between steps. Enter opens the selected step.
       </p>
-      <Suspense v-if="query.isSuccess.value && records.length && shouldLoadCanvas">
+      <Suspense v-if="query.isSuccess.value && !queryFailure && records.length && shouldLoadCanvas">
         <FlowCanvas ref="canvas" :records="records" @open-node="openNode" @add-node="openCreate" />
         <template #fallback>
           <div
@@ -211,7 +223,8 @@ function submitCreate(draft) {
       </Suspense>
       <div
         v-else-if="
-          query.isPending.value || (query.isSuccess.value && records.length && !shouldLoadCanvas)
+          query.isPending.value ||
+          (query.isSuccess.value && !queryFailure && records.length && !shouldLoadCanvas)
         "
         class="absolute inset-0 grid place-items-center p-6"
       >
@@ -226,11 +239,11 @@ function submitCreate(draft) {
           </CardContent>
         </Card>
       </div>
-      <div v-else-if="query.isError.value" class="absolute inset-0 grid place-items-center p-6">
+      <div v-else-if="queryFailure" class="absolute inset-0 grid place-items-center p-6">
         <Card class="w-full max-w-md border-destructive/20 shadow-xl" role="alert">
           <CardHeader>
             <CardTitle>Could not load the flow</CardTitle>
-            <CardDescription>{{ query.error.value?.message }}</CardDescription>
+            <CardDescription>{{ queryFailure.message }}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" @click="query.refetch()"><RotateCcw /> Retry</Button>
