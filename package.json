@@ -10,10 +10,10 @@
     "preview": "vite preview",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --deny-warnings src tests vite.config.js playwright.config.js",
+    "lint": "oxlint --deny-warnings src tests vite.config.js cucumber.js",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "cucumber-js"
   },
   "dependencies": {
     "@lucide/vue": "1.47.0",
@@ -34,6 +34,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "13.2.1",
     "@playwright/test": "1.63.0",
     "@types/node": "22.19.15",
     "@typescript/typescript6": "6.0.2",

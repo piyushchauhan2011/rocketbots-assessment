@@ -31,7 +31,7 @@ pnpm typecheck                 # Check JSDoc contracts and Vue templates
 pnpm test:unit                 # Vitest unit and integration tests
 pnpm test:unit:coverage        # Vitest with enforced coverage thresholds
 pnpm exec playwright install chromium
-pnpm test:e2e                  # Desktop and mobile Chromium workflows
+pnpm test:e2e                  # Cucumber desktop/mobile scenarios using Playwright
 pnpm build                     # Production bundle
 pnpm preview --host 127.0.0.1 # Local production preview
 ```
@@ -43,7 +43,7 @@ pnpm preview --host 127.0.0.1 # Local production preview
 - `src/features/node-details`: URL-driven details Sheet and type-specific editors.
 - `src/stores/flowUi.js`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
 - `src/router`: `/` and `/nodes/:nodeId` history routes.
-- `tests`: pure-domain unit tests, FlowView integration tests, deterministic Playwright workflows, and fixtures.
+- `tests`: pure-domain unit tests, FlowView integration tests, Cucumber features and step definitions, a Playwright Page Object, and fixtures.
 
 TanStack Vue Query exclusively owns node records. Every mutation performs an optimistic cache update, writes the complete snapshot through `nodeRepository`, rolls back on error, and invalidates on settle. Pinia does not mirror records; it owns only UI state.
 
