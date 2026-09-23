@@ -1,23 +1,7 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vite/client"],
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "allowJs": true,
-    "checkJs": true,
-    "strict": false,
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "useDefineForClassFields": true
-  },
-  "include": ["src/**/*.js", "src/**/*.vue", "tests/**/*.js", "scripts/**/*.js", "*.js"],
-  "exclude": ["tests/e2e/**/*.js", "cucumber.js"]
+  "files": [],
+  "references": [
+    { "path": "./packages/core/jsconfig.build.json" },
+    { "path": "./packages/ui/jsconfig.build.json" }
+  ]
 }

@@ -1,0 +1,10 @@
+{
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "types": ["node"],
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": ["**/*.js"]
+}

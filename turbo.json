@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [".types/**", "*.tsbuildinfo"]
+    },
+    "build": {
+      "dependsOn": ["^build", "^typecheck"],
+      "outputs": ["dist/**", "storybook-static/**", "bundle-budget-report.md"]
+    },
+    "test:unit": {},
+    "test:unit:coverage": { "outputs": ["coverage/**"] },
+    "dev": { "cache": false, "persistent": true },
+    "preview": { "cache": false, "persistent": true },
+    "storybook": { "cache": false, "persistent": true },
+    "@rocketbots/e2e#test:e2e": {
+      "dependsOn": ["@rocketbots/web#build"],
+      "cache": false,
+      "outputs": ["cucumber-report.html"]
+    }
+  }
+}

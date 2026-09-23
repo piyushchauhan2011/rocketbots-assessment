@@ -1,0 +1,7 @@
+@import '@rocketbots/ui/styles.css';
+
+@source '../stories';
+
+body {
+  min-width: 20rem;
+}

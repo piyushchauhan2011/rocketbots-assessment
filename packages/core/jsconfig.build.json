@@ -1,0 +1,14 @@
+{
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": ".types",
+    "lib": ["ES2022"],
+    "strict": false
+  },
+  "include": ["src/**/*.js"]
+}

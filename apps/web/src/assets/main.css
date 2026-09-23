@@ -1,0 +1,73 @@
+@import '@rocketbots/ui/styles.css';
+
+@source '../**/*.{js,vue}';
+
+@layer components {
+  .flow-add-trigger {
+    @apply grid size-7 place-items-center rounded-full border bg-background;
+  }
+}
+
+.flow-node {
+  animation: flow-node-in 200ms ease;
+}
+
+.vue-flow__edge {
+  animation: flow-edge-in 180ms ease;
+}
+
+@keyframes flow-node-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes flow-edge-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.flow-sheet-backdrop-enter-active,
+.flow-sheet-backdrop-leave-active {
+  transition: opacity 220ms ease;
+}
+
+.flow-sheet-backdrop-enter-from,
+.flow-sheet-backdrop-leave-to {
+  opacity: 0;
+}
+
+.flow-sheet-panel-enter-active,
+.flow-sheet-panel-leave-active {
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease;
+  will-change: transform, opacity;
+}
+
+.flow-sheet-panel-enter-from,
+.flow-sheet-panel-leave-to {
+  transform: translate3d(100%, 0, 0);
+  opacity: 0.98;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-node,
+  .vue-flow__edge,
+  .flow-sheet-backdrop-enter-active,
+  .flow-sheet-backdrop-leave-active,
+  .flow-sheet-panel-enter-active,
+  .flow-sheet-panel-leave-active {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+}

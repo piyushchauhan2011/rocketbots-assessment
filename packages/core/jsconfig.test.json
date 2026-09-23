@@ -1,0 +1,10 @@
+{
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": ["node", "vitest/globals"],
+    "strict": false
+  },
+  "include": ["src/**/*.js", "tests/**/*.js"]
+}

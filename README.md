@@ -1,13 +1,11 @@
-# Rocketbots Flow Builder Assessment
+# Rocketbots Flow Builder
 
-A Vue 3 single-page flow-chart editor for the supplied Rocketbots/respond.io payload. The browser fetches the canonical seven-node graph once, then persists edits locally.
-
-The project is authored in JavaScript/ES6. TypeScript tooling is retained only to check JSDoc contracts and Vue templates; no application or test source is authored in TypeScript.
+A Vue 3 flow-chart editor organized as a pnpm/Turborepo workspace. Source remains JavaScript/ES6 with JSDoc checking; TypeScript emits declarations only for reusable library boundaries.
 
 ## Requirements
 
 - Node.js 22
-- pnpm (Corepack is recommended)
+- pnpm 12.4.2 via Corepack
 
 ```bash
 corepack enable
@@ -15,82 +13,52 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:5173`. The browser requests the initial payload from the same-origin
-`/api/payload` endpoint. Vite proxies that request server-side to:
+Open `http://localhost:5173`. Vite proxies `/api/payload` to the supplied respond.io payload endpoint during development and preview.
 
-`https://respond-io-fe-bucket.s3.ap-southeast-1.amazonaws.com/candidate-assessments/payload.json`
+## Workspace ownership
+
+- `apps/web`: Vue application, routing, state, repository adapter, Vue Flow adapter, and web integration tests.
+- `apps/e2e`: Cucumber features, Playwright World/page object, browser fixtures, and production-preview lifecycle.
+- `apps/storybook`: standalone Storybook catalogue for reusable UI primitives.
+- `packages/core`: framework-independent graph and node domain behavior. Its checked JavaScript emits declarations into `.types` and is a real project-reference target.
+- `packages/ui`: reusable Vue primitives and shared design tokens. Its checked JavaScript/Vue sources emit declarations into `.types` and form the UI project-reference boundary.
+
+Repository policy and shared checking tools remain at the root. No application depends on another application; E2E consumes the web build through Turbo task dependencies.
 
 ## Commands
 
 ```bash
-pnpm dev                       # Vite development server
-pnpm format                    # Apply Oxfmt
-pnpm format:check              # Verify formatting
-pnpm lint                      # Oxlint quality gate
-pnpm typecheck                 # Check JSDoc contracts and Vue templates
-pnpm typecheck:e2e             # Strict-check Cucumber, World, and Page Object JSDoc
-pnpm test:unit                 # Vitest unit and integration tests
-pnpm test:unit:coverage        # Vitest with enforced coverage thresholds
-pnpm exec playwright install chromium
-pnpm test:e2e                  # Cucumber desktop/mobile scenarios using Playwright
-pnpm build                     # Production bundle with enforced size budgets
-pnpm bundle:check              # Recheck an existing dist bundle
-pnpm preview --host 127.0.0.1 # Local production preview
+pnpm dev                       # web development server
+pnpm preview -- --host 127.0.0.1 --port 4173
+pnpm storybook                 # standalone catalogue at http://localhost:6006
+pnpm build                     # all workspace builds and web bundle budgets
+pnpm build:storybook           # Storybook static build only
+pnpm typecheck                 # declarations, JSDoc, Vue templates, stories, and E2E
+pnpm test:unit                 # core and web tests
+pnpm test:unit:coverage        # independent core/web coverage gates
+pnpm --filter @rocketbots/e2e exec playwright install chromium
+pnpm test:e2e                  # builds web, previews on port 4174, runs eight examples
+pnpm format
+pnpm format:check
+pnpm lint
 ```
 
-`pnpm build` generates Vite’s manifest and fails if `bundle-budgets.json` limits are exceeded. Budgets cover initial-route JavaScript, total JavaScript, the largest JavaScript chunk, and total CSS in both raw and gzip bytes.
-The initial-route measurement starts from `initialEntries` and recursively includes their static manifest imports; action-driven dynamic chunks remain outside that budget but count toward total JavaScript and the per-chunk ceiling. Adjust limits deliberately in the budget file when an accepted product change needs additional headroom.
-CI publishes the latest results as a sticky pull-request comment, updating the same comment on every run instead of adding duplicates.
+Turbo uses its interactive TUI for local commands. CI passes `--ui=stream` for ordinary logs.
 
-## Architecture
+## Build and reports
 
-- `src/features/flow`: graph conversion, deterministic layout, Vue Flow canvas, positions, history, and shortcuts.
-- `src/features/nodes`: local repository boundary, TanStack Query hooks, node creation, and validation.
-- `src/features/node-details`: URL-driven details Sheet and type-specific editors.
-- `src/stores/flowUi.js`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
-- `src/router`: `/` and `/nodes/:nodeId` history routes.
-- `tests`: pure-domain unit tests, FlowView integration tests, Cucumber features and step definitions, a Playwright Page Object, and fixtures.
+The web build writes `apps/web/dist`, its manifest, and `apps/web/bundle-budget-report.md`. Budget entry keys remain `index.html` and `src/views/FlowView.vue`; limits cover initial-route JavaScript, total JavaScript, largest JavaScript chunk, and total CSS in raw and gzip bytes.
 
-TanStack Vue Query exclusively owns node records. The repository returns typed `neverthrow` results for payload, network, parsing, and storage failures instead of rejecting promises. Every mutation performs an optimistic cache update, writes the complete snapshot through `nodeRepository`, rolls back an error result, and invalidates on settle. Pinia does not mirror records; it owns only UI state.
+Coverage reports are package-local at `packages/core/coverage` and `apps/web/coverage`; each independently enforces 85% statements, lines, and functions plus 80% branches. Storybook writes `apps/storybook/storybook-static`. Cucumber writes `apps/e2e/cucumber-report.html`.
 
-The initial route ships only the application shell, query/store logic, and loading UI. The Vue Flow canvas is fetched after its viewport intersects and the browser becomes idle. Node details, the create dialog, and each type-specific editor are separate action-driven chunks, so message uploads, business-hours controls, and validation code are not downloaded until needed.
+## Architecture and behavior
 
-## Persistence and reset
+TanStack Vue Query exclusively owns node records. The web repository returns typed `neverthrow` results for payload, network, parsing, and storage failures. Pinia owns UI-only positions, focus, and bounded undo/redo history. Core owns deterministic graph operations, summaries, node creation, and validation; UI has no core dependency.
 
-Node records are stored under `rocketbots-flow:v1`. Canvas positions use `rocketbots-flow-positions:v2`. To reset the assessment:
+The initial route preserves lazy Vue Flow loading. Node details, creation, and type-specific editors remain action-driven chunks. Records persist under `rocketbots-flow:v1`; positions use `rocketbots-flow-positions:v2`.
 
-```js
-localStorage.removeItem('rocketbots-flow:v1')
-localStorage.removeItem('rocketbots-flow-positions:v2')
-location.reload()
-```
-
-The remote endpoint is read-only. Vite handles the backend proxy during development and preview;
-Vercel performs the equivalent server-side rewrite in production. The browser never contacts S3
-directly, avoiding its missing CORS headers. There is no fake-data fallback: proxy, malformed JSON,
-duplicate ID, and storage quota failures are surfaced in the UI and optimistic mutations roll back.
-
-## Editing rules
-
-- The **+** on a step opens a dialog for title, description, and type, then inserts that step on the edge below it. Business Hours has no **+**; add the next steps from Success or Failure.
-- Titles are required and limited to 80 characters; descriptions are required and limited to 240.
-- Send Message must contain non-empty text or an attachment before save.
-- Images: JPEG/PNG/WebP/GIF, maximum four files, 750 KiB each, and 3 MiB total encoded local data. Images persist as data URLs because no upload API is supplied.
-- Comments are 1–1000 trimmed characters.
-- Business Hours require seven unique weekdays, `HH:mm` values, and start before end. Supported timezones are UTC, Asia/Kuala_Lumpur, and the current browser IANA timezone when distinct.
-- Delete removes only the selected step and reconnects the nodes below it to the step above. Deleting Business Hours also removes its Success and Failure connectors, and the nodes on those paths stay in the flow. Trigger, Success, and Failure can be dragged; they do not open the details drawer.
-- Adding or deleting a step keeps every existing node where you placed it. The new step is positioned from its parent.
-
-## Accessibility and history
-
-Arrow keys move a visible selection through the flow, including Trigger and the Success and Failure connectors. Enter or Space opens the details drawer for a message, comment, or business-hours step. `Cmd/Ctrl+Z` undoes a move or a saved edit; `Cmd/Ctrl+Shift+Z` and `Cmd/Ctrl+Y` redo it, and the undone node is brought back into view. Shortcuts are ignored in form controls and dialogs so native text undo remains available. History stores up to 50 move and edit commands. Create and delete are not part of that history.
-
-## Testing and CI
-
-Vitest covers graph handling (including malformed relationships and cycles), validation boundaries, repository persistence/errors, history limits, and FlowView routing integration. Playwright intercepts the public payload with `tests/fixtures/payload.json` and runs the edit/upload/persistence, creation/business-hours, history/deletion, keyboard, and direct-route workflows at desktop and mobile widths.
-
-GitHub Actions uses Node 22 and a single frozen pnpm install, then gates formatting, linting, checked JSDoc/Vue templates, coverage, production build, and Chromium E2E. Coverage and Playwright reports are uploaded for diagnosis.
+The E2E workspace intercepts `/api/payload` with its own fixture and starts `@rocketbots/web` through `vite preview` at `http://127.0.0.1:4174`. It retains desktop and Pixel 7 runs, failure screenshots, storage reset, and process-group shutdown.
 
 ## Vercel
 
-Import the repository in Vercel, keep the detected Vite build (`pnpm build`, output `dist`), and deploy without secrets. `vercel.json` rewrites history routes to `index.html`, so direct requests such as `/nodes/b0653a` resolve to the SPA. After deployment, open that URL directly to verify the platform rewrite.
+`vercel.json` runs `pnpm turbo run build --filter=@rocketbots/web --ui=stream` and serves `apps/web/dist`. The `/api/payload` proxy and SPA fallback rewrites remain platform-owned, so direct routes such as `/nodes/b0653a` resolve to `index.html`.

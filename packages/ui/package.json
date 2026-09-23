@@ -1,0 +1,70 @@
+{
+  "name": "@rocketbots/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./badge": {
+      "types": "./.types/badge/index.d.ts",
+      "import": "./src/badge/index.js"
+    },
+    "./button": {
+      "types": "./.types/button/index.d.ts",
+      "import": "./src/button/index.js"
+    },
+    "./card": {
+      "types": "./.types/card/index.d.ts",
+      "import": "./src/card/index.js"
+    },
+    "./field-error": {
+      "types": "./.types/field-error/index.d.ts",
+      "import": "./src/field-error/index.js"
+    },
+    "./input": {
+      "types": "./.types/input/index.d.ts",
+      "import": "./src/input/index.js"
+    },
+    "./label": {
+      "types": "./.types/label/index.d.ts",
+      "import": "./src/label/index.js"
+    },
+    "./select": {
+      "types": "./.types/select/index.d.ts",
+      "import": "./src/select/index.js"
+    },
+    "./skeleton": {
+      "types": "./.types/skeleton/index.d.ts",
+      "import": "./src/skeleton/index.js"
+    },
+    "./textarea": {
+      "types": "./.types/textarea/index.d.ts",
+      "import": "./src/textarea/index.js"
+    },
+    "./time-field": {
+      "types": "./.types/time-picker/index.d.ts",
+      "import": "./src/time-picker/index.js"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "build": "pnpm typecheck",
+    "typecheck": "node ../../scripts/vue-typecheck.cjs --build jsconfig.build.json"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.47.0",
+    "@vueuse/core": "15.0.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-vue": "6.0.9",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.0",
+    "vue": "3.5.43"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.43"
+  }
+}

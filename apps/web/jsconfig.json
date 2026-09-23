@@ -1,0 +1,16 @@
+{
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "strict": false
+  },
+  "include": ["src/**/*.js", "src/**/*.vue", "tests/**/*.js", "vite.config.js"],
+  "references": [
+    { "path": "../../packages/core/jsconfig.build.json" },
+    { "path": "../../packages/ui/jsconfig.build.json" }
+  ]
+}

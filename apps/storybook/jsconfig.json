@@ -1,0 +1,11 @@
+{
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "strict": false
+  },
+  "include": [".storybook/**/*.js", "stories/**/*.js"],
+  "references": [{ "path": "../../packages/ui/jsconfig.build.json" }]
+}

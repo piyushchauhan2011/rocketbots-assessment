@@ -1,0 +1,18 @@
+{
+  "name": "@rocketbots/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pages/*": "./pages/*.js",
+    "#support/*": "./support/*.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project jsconfig.json",
+    "test:e2e": "cucumber-js"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "13.2.1",
+    "@playwright/test": "1.63.0"
+  }
+}

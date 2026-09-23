@@ -7,9 +7,16 @@
     "max-depth": ["error", 3],
     "max-lines-per-function": ["error", { "max": 60, "skipBlankLines": true, "skipComments": true }]
   },
-  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results"],
+  "ignorePatterns": [
+    "**/dist",
+    "**/.types",
+    "**/coverage",
+    "**/storybook-static",
+    "**/playwright-report",
+    "**/test-results"
+  ],
   "overrides": [
-    { "files": ["src/components/ui/**"], "rules": { "max-lines-per-function": "off" } },
-    { "files": ["src/main.js"], "rules": { "import/no-unassigned-import": "off" } }
+    { "files": ["packages/ui/src/**"], "rules": { "max-lines-per-function": "off" } },
+    { "files": ["apps/web/src/main.js"], "rules": { "import/no-unassigned-import": "off" } }
   ]
 }

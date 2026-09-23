@@ -26,39 +26,59 @@ jobs:
       - name: Lint
         run: pnpm lint
       - name: Typecheck checked JavaScript
-        run: pnpm typecheck
+        run: pnpm exec turbo run typecheck --ui=stream
       - name: Unit and integration coverage
-        run: pnpm test:unit:coverage
-      - name: Publish coverage report
+        run: pnpm exec turbo run test:unit:coverage --ui=stream
+      - name: Publish Core coverage report
         if: github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2
         with:
+          name: Core
+          json-summary-path: packages/core/coverage/coverage-summary.json
+          json-final-path: packages/core/coverage/coverage-final.json
           file-coverage-mode: all
           sort-by: lines-asc
-      - name: Build and enforce bundle budgets
-        run: pnpm build
+      - name: Publish Web coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: Web
+          json-summary-path: apps/web/coverage/coverage-summary.json
+          json-final-path: apps/web/coverage/coverage-final.json
+          file-coverage-mode: all
+          sort-by: lines-asc
+      - name: Build web and Storybook
+        run: pnpm exec turbo run build --filter=@rocketbots/web --filter=@rocketbots/storybook --ui=stream
       - name: Publish bundle budget report
-        if: always() && github.event_name == 'pull_request' && hashFiles('bundle-budget-report.md') != ''
+        if: always() && github.event_name == 'pull_request' && hashFiles('apps/web/bundle-budget-report.md') != ''
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: bundle-budget-report
-          path: bundle-budget-report.md
+          path: apps/web/bundle-budget-report.md
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @rocketbots/e2e exec playwright install --with-deps chromium
       - name: Browser tests
-        run: pnpm test:e2e
+        run: pnpm exec turbo run test:e2e --filter=@rocketbots/e2e --ui=stream
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage
+          path: |
+            packages/core/coverage
+            apps/web/coverage
       - name: Upload Cucumber report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cucumber-report
-          path: cucumber-report.html
+          path: apps/e2e/cucumber-report.html
+      - name: Upload Storybook
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: apps/storybook/storybook-static
 
   duplication:
     name: Duplication report
@@ -70,7 +90,7 @@ jobs:
         id: jscpd
         uses: kucherenko/jscpd@v5
         with:
-          path: src
+          path: apps/web/src,packages/core/src,packages/ui/src
           min-tokens: 50
           min-lines: 5
           reporters: console,json,html

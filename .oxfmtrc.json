@@ -2,6 +2,14 @@
   "singleQuote": true,
   "semi": false,
   "sortImports": true,
-  "sortTailwindcss": { "stylesheet": "src/assets/main.css" },
-  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results", "pnpm-lock.yaml"]
+  "sortTailwindcss": { "stylesheet": "packages/ui/src/styles.css" },
+  "ignorePatterns": [
+    "**/dist",
+    "**/.types",
+    "**/coverage",
+    "**/storybook-static",
+    "**/playwright-report",
+    "**/test-results",
+    "pnpm-lock.yaml"
+  ]
 }
