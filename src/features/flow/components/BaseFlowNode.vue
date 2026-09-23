@@ -82,7 +82,7 @@ function onArrows(event) {
     <button
       v-if="isConnectorNode"
       type="button"
-      class="flow-node mx-auto flex justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="flow-node mx-auto flex justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       tabindex="0"
       :aria-label="`${title} connector`"
       :class="highlighted && 'ring-4 ring-sky-500/25'"
@@ -98,7 +98,7 @@ function onArrows(event) {
       v-else
       type="button"
       :class="[
-        'flow-node w-full rounded-xl border border-border/70 bg-card py-0 text-left text-card-foreground shadow-md shadow-slate-900/6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flow-node w-full rounded-xl border border-border/70 bg-card py-0 text-left text-card-foreground shadow-md shadow-slate-900/6 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
         editable && 'cursor-pointer transition-shadow duration-200 hover:shadow-lg',
         highlighted && 'ring-4 ring-sky-500/15',
       ]"
@@ -135,7 +135,7 @@ function onArrows(event) {
     <button
       v-if="canAdd"
       type="button"
-      class="flow-add-trigger absolute bottom-1 left-1/2 z-30 -translate-x-1/2 border-[#f0a898] text-foreground shadow-sm transition-transform duration-200 ease-out hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="flow-add-trigger absolute bottom-1 left-1/2 z-30 -translate-x-1/2 border-[#f0a898] text-foreground shadow-sm transition-transform duration-200 ease-out hover:scale-105 focus-visible:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       aria-label="Add node"
       aria-haspopup="dialog"
       @click.stop="requestCreate"
