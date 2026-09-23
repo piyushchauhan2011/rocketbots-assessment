@@ -60,7 +60,7 @@ describe('FlowView integration', () => {
   it('renders a direct missing route with a closable not-found state', async () => {
     await render('/nodes/missing')
     expect(document.body.textContent).toContain('Node not found')
-    document.querySelector('[aria-label="Close details"]').click()
+    ;/** @type {HTMLElement} */ (document.querySelector('[aria-label="Close details"]')).click()
     await flushPromises()
     expect(document.querySelector('.sheet')).toBeNull()
   })

@@ -2,8 +2,9 @@ import { computed } from 'vue'
 import { toast } from 'vue-sonner'
 
 import { useUpdateNodeMutation } from '@/features/nodes/composables/useNodes'
-import type { FlowNodeCommand } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
+
+/** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
 
 export function useFlowHistory() {
   const store = useFlowUiStore()
@@ -11,7 +12,11 @@ export function useFlowHistory() {
   const canUndo = computed(() => store.undoStack.length > 0 && !updateMutation.isPending.value)
   const canRedo = computed(() => store.redoStack.length > 0 && !updateMutation.isPending.value)
 
-  async function apply(command: FlowNodeCommand, direction: 'before' | 'after') {
+  /**
+   * @param {FlowNodeCommand} command
+   * @param {'before' | 'after'} direction
+   */
+  async function apply(command, direction) {
     if (command.kind === 'move') {
       store.setPosition(command.nodeId, command[direction])
       return
@@ -29,7 +34,7 @@ export function useFlowHistory() {
     } catch (error) {
       store.redoStack.pop()
       store.undoStack.push(command)
-      toast.error((error as Error).message)
+      toast.error(error instanceof Error ? error.message : String(error))
       return null
     }
   }
@@ -43,7 +48,7 @@ export function useFlowHistory() {
     } catch (error) {
       store.undoStack.pop()
       store.redoStack.push(command)
-      toast.error((error as Error).message)
+      toast.error(error instanceof Error ? error.message : String(error))
       return null
     }
   }

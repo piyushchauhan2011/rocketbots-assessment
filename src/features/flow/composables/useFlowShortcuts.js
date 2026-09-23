@@ -1,13 +1,18 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 
-export function useFlowShortcuts({ undo, redo }: { undo: () => void; redo: () => void }) {
-  function isEditing(target: EventTarget | null): boolean {
+/**
+ * @param {{ undo: () => void, redo: () => void }} callbacks
+ */
+export function useFlowShortcuts({ undo, redo }) {
+  /** @param {EventTarget | null} target */
+  function isEditing(target) {
     return (
       target instanceof Element &&
       Boolean(target.closest('input, textarea, select, [contenteditable], [role="dialog"], .sheet'))
     )
   }
-  function onKeydown(event: KeyboardEvent) {
+  /** @param {KeyboardEvent} event */
+  function onKeydown(event) {
     if (!(event.metaKey || event.ctrlKey) || isEditing(event.target)) return
     const key = event.key.toLowerCase()
     if (key === 'z' && event.shiftKey) {

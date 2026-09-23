@@ -1,14 +1,21 @@
-<script setup lang="ts">
+<script setup>
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
 import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 
-import type { Position as NodePosition, NodeRecord } from '@/features/nodes/lib/types'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 import { buildFlowEdges, buildFlowNodes, nextNodeId } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
+
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeId} NodeId */
+/** @typedef {import('@/features/nodes/lib/types.js').Position} NodePosition */
+/** @typedef {'up' | 'down' | 'left' | 'right'} MoveDirection */
+/** @typedef {{ revealNode: (nodeId: NodeId) => Promise<void> }} ViewportBridgeSurface */
+/** @typedef {{ nodeId: string, position: NodePosition }} DragStart */
+/** @typedef {{ node: { id: string, selectable?: boolean, position: NodePosition } }} FlowNodeEvent */
 
 const ViewportBridge = defineComponent({
   name: 'ViewportBridge',
@@ -25,7 +32,8 @@ const ViewportBridge = defineComponent({
         })
       },
     )
-    async function centerOnNode(nodeId: string | number) {
+    /** @param {NodeId} nodeId */
+    async function centerOnNode(nodeId) {
       await nextTick()
       let node = findNode(String(nodeId))
       if (!node?.dimensions?.width) {
@@ -46,14 +54,13 @@ const ViewportBridge = defineComponent({
   },
 })
 
-const props = defineProps<{ records: NodeRecord[] }>()
-const emit = defineEmits<{
-  'open-node': [nodeId: string]
-  'add-node': [parentId: string]
-}>()
+const props = /** @type {{ records: NodeRecord[] }} */ (
+  defineProps({ records: { type: Array, required: true } })
+)
+const emit = defineEmits(['open-node', 'add-node'])
 const store = useFlowUiStore()
-const bridge = ref<{ revealNode: (nodeId: string | number) => Promise<void> } | null>(null)
-const dragStart = ref<{ nodeId: string; position: NodePosition } | null>(null)
+const bridge = ref(/** @type {ViewportBridgeSurface | null} */ (null))
+const dragStart = ref(/** @type {DragStart | null} */ (null))
 
 const nodes = computed(() =>
   buildFlowNodes(props.records, store.positions).map((node) => ({
@@ -61,32 +68,40 @@ const nodes = computed(() =>
     data: {
       ...node.data,
       onOpen: openNode,
-      onAdd: (parentId: string) => emit('add-node', parentId),
+      onAdd: (/** @type {string} */ parentId) => emit('add-node', parentId),
       onMove: moveSelection,
     },
   })),
 )
 const edges = computed(() => buildFlowEdges(props.records))
 
-function openNode(nodeId: string) {
+/** @param {string} nodeId */
+function openNode(nodeId) {
   store.focusNode(nodeId)
   emit('open-node', nodeId)
 }
-function moveSelection(nodeId: string, direction: 'up' | 'down' | 'left' | 'right') {
+/**
+ * @param {string} nodeId
+ * @param {MoveDirection} direction
+ */
+function moveSelection(nodeId, direction) {
   const next = nextNodeId(props.records, nodeId, direction)
   if (!next) return
   store.focusNode(next)
   void focusNode(next)
 }
-function onNodeClick({ node }: { node: { selectable?: boolean; id: string } }) {
+/** @param {FlowNodeEvent} event */
+function onNodeClick({ node }) {
   store.focusNode(node.id)
   void focusNode(node.id)
   if (node.selectable !== false) emit('open-node', node.id)
 }
-function onDragStart({ node }: { node: { id: string; position: NodePosition } }) {
+/** @param {FlowNodeEvent} event */
+function onDragStart({ node }) {
   dragStart.value = { nodeId: node.id, position: { ...node.position } }
 }
-function onDragStop({ node }: { node: { id: string; position: NodePosition } }) {
+/** @param {FlowNodeEvent} event */
+function onDragStop({ node }) {
   const before = dragStart.value?.position
   const after = { ...node.position }
   dragStart.value = null
@@ -95,11 +110,15 @@ function onDragStop({ node }: { node: { id: string; position: NodePosition } }) 
   store.record({ kind: 'move', nodeId: node.id, before, after })
 }
 
-async function focusNode(nodeId: string | number) {
+/** @param {NodeId} nodeId */
+async function focusNode(nodeId) {
   await nextTick()
-  document.querySelector(`[data-id="${CSS.escape(String(nodeId))}"] .flow-node`)?.focus()
+  ;/** @type {HTMLElement | null} */ (
+    document.querySelector(`[data-id="${CSS.escape(String(nodeId))}"] .flow-node`)
+  )?.focus()
 }
-async function revealNode(nodeId: string | number) {
+/** @param {NodeId} nodeId */
+async function revealNode(nodeId) {
   await bridge.value?.revealNode(nodeId)
 }
 defineExpose({ focusNode, revealNode })

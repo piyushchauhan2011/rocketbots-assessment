@@ -1,34 +1,52 @@
-import type { NodeRecord, Position } from '@/features/nodes/lib/types'
+/** @typedef {import('@/features/nodes/lib/types.js').NodeId} NodeId */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeKind} NodeKind */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {import('@/features/nodes/lib/types.js').Position} Position */
 
 export const X_GAP = 320
 export const Y_GAP = 248
 
-function id(value: unknown): string {
+/** @param {unknown} value @returns {string} */
+function id(value) {
   return String(value)
 }
 
+/** @type {Record<NodeKind, (record: NodeRecord) => string>} */
 const SUMMARY_BY_TYPE = {
   trigger: () => 'Conversation opened',
-  sendMessage: (record: NodeRecord) => {
+  sendMessage: (record) => {
     const text = record.data?.payload?.find((item) => item.type === 'text')?.text?.trim()
     return text || 'Message with attachment'
   },
-  addComment: (record: NodeRecord) => record.data?.comment?.trim() || 'Comment',
-  dateTime: (record: NodeRecord) => `Business hours - ${record.data?.timezone || 'UTC'}`,
-  dateTimeConnector: (record: NodeRecord) => `${record.data?.connectorType || ''} path`.trim(),
+  addComment: (record) => record.data?.comment?.trim() || 'Comment',
+  dateTime: (record) => `Business hours - ${record.data?.timezone || 'UTC'}`,
+  dateTimeConnector: (record) => `${record.data?.connectorType || ''} path`.trim(),
 }
 
-export function getNodeSummary(record: Partial<NodeRecord> | null | undefined): string {
-  const description = record?.data?.description?.trim()
-  if (description) return description
-  return (
-    SUMMARY_BY_TYPE[record?.type as keyof typeof SUMMARY_BY_TYPE]?.(record as NodeRecord) ||
-    record?.name ||
-    'Flow step'
-  )
+/** @param {Partial<NodeRecord> | null | undefined} record @returns {string} */
+function descriptionFor(record) {
+  return record?.data?.description?.trim() || ''
 }
 
-export function buildFlowEdges(records: NodeRecord[]) {
+/** @param {Partial<NodeRecord> | null | undefined} record @returns {string} */
+function summaryForType(record) {
+  if (!record?.type) return ''
+  return SUMMARY_BY_TYPE[record.type](/** @type {NodeRecord} */ (record))
+}
+
+/**
+ * @param {Partial<NodeRecord> | null | undefined} record
+ * @returns {string}
+ */
+export function getNodeSummary(record) {
+  return descriptionFor(record) || summaryForType(record) || record?.name || 'Flow step'
+}
+
+/**
+ * @param {NodeRecord[]} records
+ * @returns {import('@vue-flow/core').Edge[]}
+ */
+export function buildFlowEdges(records) {
   const known = new Set(records.map((record) => id(record.id)))
   return records.flatMap((record) => {
     const parent = id(record.parentId)
@@ -38,7 +56,7 @@ export function buildFlowEdges(records: NodeRecord[]) {
         id: `edge-${parent}-${id(record.id)}`,
         source: parent,
         target: id(record.id),
-        type: 'smoothstep' as const,
+        type: /** @type {'smoothstep'} */ ('smoothstep'),
         selectable: false,
         focusable: false,
         pathOptions: { borderRadius: 16, offset: 16 },
@@ -48,17 +66,24 @@ export function buildFlowEdges(records: NodeRecord[]) {
   })
 }
 
-export function getDescendantIds(records: NodeRecord[], nodeId: string | number): string[] {
-  const children = new Map<string, string[]>()
+/**
+ * @param {NodeRecord[]} records
+ * @param {NodeId} nodeId
+ * @returns {string[]}
+ */
+export function getDescendantIds(records, nodeId) {
+  /** @type {Map<string, string[]>} */
+  const children = new Map()
   records.forEach((record) => {
     const parent = id(record.parentId)
     children.set(parent, [...(children.get(parent) || []), id(record.id)])
   })
-  const found: string[] = []
+  /** @type {string[]} */
+  const found = []
   const seen = new Set([id(nodeId)])
   const queue = [...(children.get(id(nodeId)) || [])]
   while (queue.length) {
-    const child = queue.shift()
+    const child = /** @type {string} */ (queue.shift())
     if (seen.has(child)) continue
     seen.add(child)
     found.push(child)
@@ -67,9 +92,14 @@ export function getDescendantIds(records: NodeRecord[], nodeId: string | number)
   return found
 }
 
-export function layoutGraph(records: NodeRecord[]): Record<string, Position> {
+/**
+ * @param {NodeRecord[]} records
+ * @returns {Record<string, Position>}
+ */
+export function layoutGraph(records) {
   const recordIds = new Set(records.map((record) => id(record.id)))
-  const children = new Map<string, string[]>()
+  /** @type {Map<string, string[]>} */
+  const children = new Map()
   records.forEach((record) => {
     const parent = id(record.parentId)
     children.set(parent, [...(children.get(parent) || []), id(record.id)])
@@ -78,10 +108,17 @@ export function layoutGraph(records: NodeRecord[]): Record<string, Position> {
     .filter((record) => id(record.parentId) === '-1' || !recordIds.has(id(record.parentId)))
     .map((record) => id(record.id))
   const placed = new Set()
-  const positions: Record<string, Position> = {}
+  /** @type {Record<string, Position>} */
+  const positions = {}
   let nextColumn = 0
 
-  function place(nodeId: string, depth: number, ancestry: Set<string>) {
+  /**
+   * @param {string} nodeId
+   * @param {number} depth
+   * @param {Set<string>} ancestry
+   * @returns {number}
+   */
+  function place(nodeId, depth, ancestry) {
     if (placed.has(nodeId) || ancestry.has(nodeId)) return 0
     const branch = new Set(ancestry).add(nodeId)
     const validChildren = (children.get(nodeId) || []).filter((child) => !branch.has(child))
@@ -104,7 +141,12 @@ export function layoutGraph(records: NodeRecord[]): Record<string, Position> {
   return positions
 }
 
-function removedIdsFor(records: NodeRecord[], target: NodeRecord) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {NodeRecord} target
+ * @returns {Set<string>}
+ */
+function removedIdsFor(records, target) {
   const targetId = id(target.id)
   const removed = new Set([targetId])
   if (target.type !== 'dateTime') return removed
@@ -116,9 +158,14 @@ function removedIdsFor(records: NodeRecord[], target: NodeRecord) {
   return removed
 }
 
-export function removeNode(records: NodeRecord[], nodeId: string | number) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {NodeId} nodeId
+ * @returns {{ records: NodeRecord[], removedIds: string[] }}
+ */
+export function removeNode(records, nodeId) {
   const target = records.find((record) => id(record.id) === id(nodeId))
-  if (!target) return { records, removedIds: [] as string[] }
+  if (!target) return { records, removedIds: [] }
   const removed = removedIdsFor(records, target)
   const next = records.flatMap((record) => {
     if (removed.has(id(record.id))) return []
@@ -128,18 +175,26 @@ export function removeNode(records: NodeRecord[], nodeId: string | number) {
   return { records: next, removedIds: [...removed] }
 }
 
-function siblingId(records: NodeRecord[], current: NodeRecord, step: number) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {NodeRecord} current
+ * @param {number} step
+ * @returns {string | null}
+ */
+function siblingId(records, current, step) {
   const siblings = records.filter((record) => id(record.parentId) === id(current.parentId))
   const index = siblings.findIndex((record) => id(record.id) === id(current.id))
   const next = siblings[index + step]
   return next ? id(next.id) : null
 }
 
-export function nextNodeId(
-  records: NodeRecord[],
-  currentId: string | null,
-  direction: 'up' | 'down' | 'left' | 'right',
-) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {string | null} currentId
+ * @param {'up' | 'down' | 'left' | 'right'} direction
+ * @returns {string | null}
+ */
+export function nextNodeId(records, currentId, direction) {
   if (!currentId) {
     const root = records.find((record) => record.type === 'trigger') || records[0]
     return root ? id(root.id) : null
@@ -157,17 +212,28 @@ export function nextNodeId(
   return siblingId(records, current, direction === 'left' ? -1 : 1)
 }
 
-function point(position: Position): Position {
+/** @param {Position} position @returns {Position} */
+function point(position) {
   return { x: position.x, y: position.y }
 }
 
-function overlaps(position: Position, placed: Record<string, Position>) {
+/**
+ * @param {Position} position
+ * @param {Record<string, Position>} placed
+ * @returns {boolean}
+ */
+function overlaps(position, placed) {
   return Object.values(placed).some(
     (current) => Math.abs(current.x - position.x) < 8 && Math.abs(current.y - position.y) < 8,
   )
 }
 
-function clearPosition(position: Position, placed: Record<string, Position>) {
+/**
+ * @param {Position} position
+ * @param {Record<string, Position>} placed
+ * @returns {Position}
+ */
+function clearPosition(position, placed) {
   let next = point(position)
   for (let shift = 0; overlaps(next, placed) && shift < 8; shift += 1) {
     next = { x: position.x + (shift + 1) * X_GAP, y: position.y }
@@ -175,10 +241,12 @@ function clearPosition(position: Position, placed: Record<string, Position>) {
   return next
 }
 
-export function missingLayoutPositions(
-  records: NodeRecord[],
-  saved: Record<string, Position> = {},
-) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {Record<string, Position>} [saved]
+ * @returns {Record<string, Position>}
+ */
+export function missingLayoutPositions(records, saved = {}) {
   const layout = layoutGraph(records)
   return Object.fromEntries(
     records.flatMap((record) => {
@@ -188,11 +256,13 @@ export function missingLayoutPositions(
   )
 }
 
-function addedPosition(
-  record: NodeRecord,
-  layout: Record<string, Position>,
-  placed: Record<string, Position>,
-) {
+/**
+ * @param {NodeRecord} record
+ * @param {Record<string, Position>} layout
+ * @param {Record<string, Position>} placed
+ * @returns {Position}
+ */
+function addedPosition(record, layout, placed) {
   const nodeId = id(record.id)
   const parentId = id(record.parentId)
   const layoutPos = layout[nodeId]
@@ -208,13 +278,16 @@ function addedPosition(
   return clearPosition(anchored, placed)
 }
 
-export function positionsForAddedNodes(
-  records: NodeRecord[],
-  saved: Record<string, Position> = {},
-) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {Record<string, Position>} [saved]
+ * @returns {Record<string, Position>}
+ */
+export function positionsForAddedNodes(records, saved = {}) {
   const layout = layoutGraph(records)
   const placed = { ...saved }
-  const added: Record<string, Position> = {}
+  /** @type {Record<string, Position>} */
+  const added = {}
   const pending = records
     .filter((record) => !placed[id(record.id)] && layout[id(record.id)])
     .sort(
@@ -231,7 +304,13 @@ export function positionsForAddedNodes(
   return added
 }
 
-export function spliceNodes(records: NodeRecord[], parentId: string, created: NodeRecord[]) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {string} parentId
+ * @param {NodeRecord[]} created
+ * @returns {NodeRecord[]}
+ */
+export function spliceNodes(records, parentId, created) {
   const anchorId = created.length === 3 ? created[1].id : created[0].id
   const parent = id(parentId)
   const shifted = records.map((record) =>
@@ -240,12 +319,14 @@ export function spliceNodes(records: NodeRecord[], parentId: string, created: No
   return [...shifted, ...created]
 }
 
-export function buildFlowNodes(
-  records: NodeRecord[],
-  savedPositions: Record<string, Position> = {},
-) {
+/**
+ * @param {NodeRecord[]} records
+ * @param {Record<string, Position>} [savedPositions]
+ * @returns {import('@vue-flow/core').Node[]}
+ */
+export function buildFlowNodes(records, savedPositions = {}) {
   const layout = layoutGraph(records)
-  const parentCounts = new Map<string, number>()
+  const parentCounts = new Map()
   records.forEach((record) => {
     const parentId = id(record.parentId)
     parentCounts.set(parentId, (parentCounts.get(parentId) || 0) + 1)

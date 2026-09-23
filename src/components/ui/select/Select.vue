@@ -1,19 +1,25 @@
-<script setup lang="ts">
+<script setup>
 import { ChevronDown } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-const props = defineProps<{
-  id?: string
-  modelValue: string
-  options: { value: string; label: string }[]
-  placeholder?: string
-  invalid?: boolean
-  describedBy?: string
-}>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+/** @typedef {{ value: string, label: string }} SelectOption */
+/** @typedef {import('vue').PropType<SelectOption[]>} SelectOptionsProp */
+
+const props =
+  /** @type {{ id?: string, modelValue: string, options: SelectOption[], placeholder?: string, invalid?: boolean, describedBy?: string }} */ (
+    defineProps({
+      id: { type: String, default: undefined },
+      modelValue: { type: String, required: true },
+      options: { type: /** @type {SelectOptionsProp} */ (Array), required: true },
+      placeholder: { type: String, default: undefined },
+      invalid: { type: Boolean, default: false },
+      describedBy: { type: String, default: undefined },
+    })
+  )
+const emit = defineEmits(['update:modelValue'])
 
 const open = ref(false)
-const root = ref<HTMLElement | null>(null)
+const root = ref(/** @type {HTMLElement | null} */ (null))
 const activeIndex = ref(0)
 const selected = computed(() => props.options.find((option) => option.value === props.modelValue))
 const listId = computed(() => (props.id ? `${props.id}-list` : undefined))
@@ -21,18 +27,21 @@ const listId = computed(() => (props.id ? `${props.id}-list` : undefined))
 function close() {
   open.value = false
 }
-function choose(index: number) {
+/** @param {number} index */
+function choose(index) {
   const option = props.options[index]
   if (!option) return
   emit('update:modelValue', option.value)
   close()
-  root.value?.querySelector<HTMLButtonElement>('button')?.focus()
+  ;/** @type {HTMLButtonElement | null} */ (root.value?.querySelector('button'))?.focus()
 }
-function move(step: number) {
+/** @param {number} step */
+function move(step) {
   const count = props.options.length
   activeIndex.value = (activeIndex.value + step + count) % count
 }
-function onKeydown(event: KeyboardEvent) {
+/** @param {KeyboardEvent} event */
+function onKeydown(event) {
   if (event.key === 'Escape') {
     if (!open.value) return
     event.stopPropagation()
@@ -57,8 +66,9 @@ function onKeydown(event: KeyboardEvent) {
     choose(activeIndex.value)
   }
 }
-function onPointerDown(event: PointerEvent) {
-  if (!open.value || !root.value?.contains(event.target as Node)) close()
+/** @param {PointerEvent} event */
+function onPointerDown(event) {
+  if (!open.value || !root.value?.contains(/** @type {Node} */ (event.target))) close()
 }
 
 onMounted(() => window.addEventListener('pointerdown', onPointerDown))

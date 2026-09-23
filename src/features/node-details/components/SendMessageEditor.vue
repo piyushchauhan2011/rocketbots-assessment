@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ImagePlus, Plus, Trash2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -8,18 +8,30 @@ import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { validateUpload } from '@/features/nodes/lib/nodeSchemas'
-import type { MessagePayloadItem } from '@/features/nodes/lib/types'
 
-const props = defineProps<{ modelValue: MessagePayloadItem[]; error?: string }>()
-const emit = defineEmits<{ 'update:modelValue': [value: MessagePayloadItem[]] }>()
+/** @typedef {import('@/features/nodes/lib/types.js').MessagePayloadItem} MessagePayloadItem */
+/** @typedef {import('vue').PropType<MessagePayloadItem[]>} MessagePayloadProp */
+
+const props = /** @type {{ modelValue: MessagePayloadItem[], error?: string }} */ (
+  defineProps({
+    modelValue: { type: /** @type {MessagePayloadProp} */ (Array), required: true },
+    error: { type: String, default: undefined },
+  })
+)
+const emit = defineEmits(['update:modelValue'])
 const uploadError = ref('')
 
-function replace(index: number, item: MessagePayloadItem) {
+/**
+ * @param {number} index
+ * @param {MessagePayloadItem} item
+ */
+function replace(index, item) {
   const next = props.modelValue.slice()
   next[index] = item
   emit('update:modelValue', next)
 }
-function remove(index: number) {
+/** @param {number} index */
+function remove(index) {
   emit(
     'update:modelValue',
     props.modelValue.filter((_item, itemIndex) => itemIndex !== index),
@@ -28,7 +40,8 @@ function remove(index: number) {
 function appendText() {
   emit('update:modelValue', [...props.modelValue, { type: 'text', text: '' }])
 }
-function readFile(file: File): Promise<string> {
+/** @param {File} file @returns {Promise<string>} */
+function readFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
@@ -36,11 +49,13 @@ function readFile(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
-async function upload(event: Event) {
+/** @param {Event} event */
+async function upload(event) {
   uploadError.value = ''
+  /** @type {File[]} */
   const accepted = []
   const validationPayload = [...props.modelValue]
-  const target = event.target as HTMLInputElement
+  const target = /** @type {HTMLInputElement} */ (event.target)
   for (const file of target.files || []) {
     const validation = validateUpload(file, validationPayload)
     if (validation) {
@@ -55,10 +70,11 @@ async function upload(event: Event) {
   }
   try {
     const attachments = await Promise.all(accepted.map((file) => readFile(file)))
+    /** @type {MessagePayloadItem[]} */
     const additions = attachments.map((attachment) => ({ type: 'attachment', attachment }))
     emit('update:modelValue', [...props.modelValue, ...additions])
   } catch (readError) {
-    uploadError.value = (readError as Error).message
+    uploadError.value = readError instanceof Error ? readError.message : String(readError)
   }
   target.value = ''
 }

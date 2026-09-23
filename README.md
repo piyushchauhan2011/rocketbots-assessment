@@ -2,6 +2,8 @@
 
 A Vue 3 single-page flow-chart editor for the supplied Rocketbots/respond.io payload. The browser fetches the canonical seven-node graph once, then persists edits locally.
 
+The project is authored in JavaScript/ES6. TypeScript tooling is retained only to check JSDoc contracts and Vue templates; no application or test source is authored in TypeScript.
+
 ## Requirements
 
 - Node.js 22
@@ -25,6 +27,7 @@ pnpm dev                       # Vite development server
 pnpm format                    # Apply Oxfmt
 pnpm format:check              # Verify formatting
 pnpm lint                      # Oxlint quality gate
+pnpm typecheck                 # Check JSDoc contracts and Vue templates
 pnpm test:unit                 # Vitest unit and integration tests
 pnpm test:unit:coverage        # Vitest with enforced coverage thresholds
 pnpm exec playwright install chromium
@@ -38,7 +41,7 @@ pnpm preview --host 127.0.0.1 # Local production preview
 - `src/features/flow`: graph conversion, deterministic layout, Vue Flow canvas, positions, history, and shortcuts.
 - `src/features/nodes`: local repository boundary, TanStack Query hooks, node creation, and validation.
 - `src/features/node-details`: URL-driven details Sheet and type-specific editors.
-- `src/stores/flowUi.ts`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
+- `src/stores/flowUi.js`: Pinia UI-only state: positions, focus, and bounded undo/redo commands.
 - `src/router`: `/` and `/nodes/:nodeId` history routes.
 - `tests`: pure-domain unit tests, FlowView integration tests, deterministic Playwright workflows, and fixtures.
 
@@ -78,7 +81,7 @@ Arrow keys move a visible selection through the flow, including Trigger and the 
 
 Vitest covers graph handling (including malformed relationships and cycles), validation boundaries, repository persistence/errors, history limits, and FlowView routing integration. Playwright intercepts the public payload with `tests/fixtures/payload.json` and runs the edit/upload/persistence, creation/business-hours, history/deletion, keyboard, and direct-route workflows at desktop and mobile widths.
 
-GitHub Actions uses Node 22 and a single frozen pnpm install, then gates formatting, linting, coverage, production build, and Chromium E2E. Coverage and Playwright reports are uploaded for diagnosis.
+GitHub Actions uses Node 22 and a single frozen pnpm install, then gates formatting, linting, checked JSDoc/Vue templates, coverage, production build, and Chromium E2E. Coverage and Playwright reports are uploaded for diagnosis.
 
 ## Vercel
 

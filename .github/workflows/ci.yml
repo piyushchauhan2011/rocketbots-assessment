@@ -25,6 +25,8 @@ jobs:
         run: pnpm format:check
       - name: Lint
         run: pnpm lint
+      - name: Typecheck checked JavaScript
+        run: pnpm typecheck
       - name: Unit and integration coverage
         run: pnpm test:unit:coverage
       - name: Publish coverage report

@@ -1,15 +1,25 @@
 import { defineStore } from 'pinia'
 
-import type { FlowNodeCommand, Position } from '@/features/nodes/lib/types'
+/** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
+/** @typedef {import('@/features/nodes/lib/types.js').NodeId} NodeId */
+/** @typedef {import('@/features/nodes/lib/types.js').Position} Position */
 
 export const POSITIONS_STORAGE_KEY = 'rocketbots-flow-positions:v2'
 const HISTORY_LIMIT = 50
 
-function point(position: Partial<Position> | undefined): Position {
+/**
+ * @param {Partial<Position> | undefined} position
+ * @returns {Position}
+ */
+function point(position) {
   return { x: Number(position?.x) || 0, y: Number(position?.y) || 0 }
 }
 
-function cloneCommand(command: FlowNodeCommand): FlowNodeCommand {
+/**
+ * @param {FlowNodeCommand} command
+ * @returns {FlowNodeCommand}
+ */
+function cloneCommand(command) {
   if (command.kind === 'move') {
     return {
       kind: 'move',
@@ -18,15 +28,15 @@ function cloneCommand(command: FlowNodeCommand): FlowNodeCommand {
       after: point(command.after),
     }
   }
-  return JSON.parse(JSON.stringify(command)) as FlowNodeCommand
+  return /** @type {FlowNodeCommand} */ (JSON.parse(JSON.stringify(command)))
 }
 
-function loadPositions(): Record<string, Position> {
+/** @returns {Record<string, Position>} */
+function loadPositions() {
   try {
-    return JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}') as Record<
-      string,
-      Position
-    >
+    return /** @type {Record<string, Position>} */ (
+      JSON.parse(localStorage.getItem(POSITIONS_STORAGE_KEY) || '{}')
+    )
   } catch {
     return {}
   }
@@ -35,29 +45,34 @@ function loadPositions(): Record<string, Position> {
 export const useFlowUiStore = defineStore('flow-ui', {
   state: () => ({
     positions: loadPositions(),
-    focusedNodeId: null as string | null,
-    undoStack: [] as FlowNodeCommand[],
-    redoStack: [] as FlowNodeCommand[],
+    focusedNodeId: /** @type {string | null} */ (null),
+    undoStack: /** @type {FlowNodeCommand[]} */ ([]),
+    redoStack: /** @type {FlowNodeCommand[]} */ ([]),
   }),
   actions: {
-    setPosition(nodeId: string | number, position: Position) {
+    /** @param {NodeId} nodeId @param {Position} position */
+    setPosition(nodeId, position) {
       this.positions = { ...this.positions, [String(nodeId)]: { ...position } }
       localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(this.positions))
     },
-    setPositions(entries: Record<string, Position>) {
+    /** @param {Record<string, Position>} entries */
+    setPositions(entries) {
       this.positions = { ...this.positions, ...entries }
       localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(this.positions))
     },
-    removePositions(ids: Array<string | number>) {
+    /** @param {NodeId[]} ids */
+    removePositions(ids) {
       const next = { ...this.positions }
       ids.forEach((id) => delete next[String(id)])
       this.positions = next
       localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(next))
     },
-    focusNode(nodeId: string | number | null) {
+    /** @param {NodeId | null} nodeId */
+    focusNode(nodeId) {
       this.focusedNodeId = nodeId === null ? null : String(nodeId)
     },
-    record(command: FlowNodeCommand) {
+    /** @param {FlowNodeCommand} command */
+    record(command) {
       this.undoStack = [...this.undoStack.slice(-(HISTORY_LIMIT - 1)), cloneCommand(command)]
       this.redoStack = []
     },

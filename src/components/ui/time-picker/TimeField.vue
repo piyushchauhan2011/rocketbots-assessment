@@ -1,25 +1,26 @@
-<script setup lang="ts">
+<script setup>
 import { Clock3 } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-const props = defineProps<{
-  id: string
-  label: string
-  modelValue: string
-  invalid?: boolean
-  describedBy?: string
-}>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const props = defineProps({
+  id: { type: String, required: true },
+  label: { type: String, required: true },
+  modelValue: { type: String, required: true },
+  invalid: { type: Boolean, default: false },
+  describedBy: { type: String, default: undefined },
+})
+const emit = defineEmits(['update:modelValue'])
 
 const open = ref(false)
-const root = ref<HTMLElement | null>(null)
-const trigger = ref<HTMLButtonElement | null>(null)
+const root = ref(/** @type {HTMLElement | null} */ (null))
+const trigger = ref(/** @type {HTMLButtonElement | null} */ (null))
 const times = Array.from({ length: 48 }, (_, index) => {
   const hour = String(Math.floor(index / 2)).padStart(2, '0')
   return `${hour}:${index % 2 ? '30' : '00'}`
 })
 
-function formatTime(value: string) {
+/** @param {string} value */
+function formatTime(value) {
   const [hour = '0', minute = '00'] = value.split(':')
   const hourNumber = Number(hour)
   const period = hourNumber < 12 ? 'AM' : 'PM'
@@ -27,18 +28,21 @@ function formatTime(value: string) {
   return `${displayHour}:${minute} ${period}`
 }
 
-async function pick(value: string) {
+/** @param {string} value */
+async function pick(value) {
   emit('update:modelValue', value)
   open.value = false
   await nextTick()
   trigger.value?.focus()
 }
 
-function onPointerDown(event: PointerEvent) {
-  if (!open.value || !root.value?.contains(event.target as Node)) open.value = false
+/** @param {PointerEvent} event */
+function onPointerDown(event) {
+  if (!open.value || !root.value?.contains(/** @type {Node} */ (event.target))) open.value = false
 }
 
-async function onKeydown(event: KeyboardEvent) {
+/** @param {KeyboardEvent} event */
+async function onKeydown(event) {
   if (event.key !== 'Escape' || !open.value) return
   event.stopPropagation()
   open.value = false

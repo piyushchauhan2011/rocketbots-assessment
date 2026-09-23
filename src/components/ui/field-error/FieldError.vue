@@ -1,5 +1,8 @@
-<script setup lang="ts">
-defineProps<{ id: string; message?: string | null }>()
+<script setup>
+defineProps({
+  id: { type: String, required: true },
+  message: { type: String, default: undefined },
+})
 </script>
 
 <template>
