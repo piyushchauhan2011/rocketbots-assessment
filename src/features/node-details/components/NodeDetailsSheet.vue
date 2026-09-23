@@ -259,7 +259,7 @@ async function save() {
   if (afterRecord.type === 'addComment') {
     afterRecord.data.comment = String(afterRecord.data.comment).trim()
   }
-  const result = await updateMutation.mutateAsync(afterRecord)
+  const result = await updateMutation.mutateResult(afterRecord)
   if (result.isErr()) {
     toast.error(result.error.message)
     return
@@ -281,7 +281,7 @@ async function deleteNode() {
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
   store.setPositions(missingLayoutPositions(props.records, store.positions))
-  const result = await replaceMutation.mutateAsync(next.records)
+  const result = await replaceMutation.mutateResult(next.records)
   if (result.isErr()) {
     toast.error(result.error.message)
   } else {

@@ -23,7 +23,7 @@ export function useFlowHistory() {
       return ok(undefined)
     }
     const record = direction === 'before' ? command.beforeRecord : command.afterRecord
-    return updateMutation.mutateAsync(record)
+    return updateMutation.mutateResult(record)
   }
   async function undo() {
     if (!canUndo.value) return null

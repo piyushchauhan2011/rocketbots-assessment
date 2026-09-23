@@ -31,6 +31,7 @@ Feature: Flow builder workflows
     When I enter the node title "Office Hours" and description "Route by schedule"
     And I choose the "Business Hours" node type
     And I create the node
+    Then the notification "Office Hours created" is visible
     Then the flow contains 10 nodes
     And the "Business Hours" editor is visible
     When I choose "09:00 AM" as the first end time
@@ -76,6 +77,7 @@ Feature: Flow builder workflows
     When I open the "Welcome Message" message node
     And I change the title to "History change"
     And I save the node
+    Then the notification "Node saved" is visible
     And I close the details drawer
     Then the flow route is restored
     And the "Undo" button is enabled

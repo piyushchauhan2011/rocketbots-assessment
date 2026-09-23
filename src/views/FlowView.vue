@@ -155,7 +155,7 @@ async function createNode(parentId, type, draft) {
   store.setPositions(missingLayoutPositions(records.value, store.positions))
   const next = spliceNodes(records.value, parentId, created)
   store.setPositions(positionsForAddedNodes(next, store.positions))
-  const result = await replaceMutation.mutateAsync(next)
+  const result = await replaceMutation.mutateResult(next)
   if (result.isErr()) {
     store.removePositions(created.map((record) => record.id))
     store.setPositions(previous)

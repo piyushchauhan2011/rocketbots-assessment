@@ -258,6 +258,13 @@ Then(
 )
 
 Then(
+  'the notification {string} is visible',
+  stringStep(async function (message) {
+    await flow(this).expectTextVisible(message)
+  }),
+)
+
+Then(
   'the image upload is invalid',
   step(async function () {
     await flow(this).expectUploadInvalid()
