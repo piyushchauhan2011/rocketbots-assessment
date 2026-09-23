@@ -1,6 +1,6 @@
 <script setup>
 import { Clock3, MessageSquare, MessageSquareText, Save, Trash2 } from '@lucide/vue'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -23,9 +23,9 @@ import {
 } from '@/features/nodes/lib/nodeSchemas'
 import { useFlowUiStore } from '@/stores/flowUi'
 
-import AddCommentEditor from './AddCommentEditor.vue'
-import BusinessHoursEditor from './BusinessHoursEditor.vue'
-import SendMessageEditor from './SendMessageEditor.vue'
+const AddCommentEditor = defineAsyncComponent(() => import('./AddCommentEditor.vue'))
+const BusinessHoursEditor = defineAsyncComponent(() => import('./BusinessHoursEditor.vue'))
+const SendMessageEditor = defineAsyncComponent(() => import('./SendMessageEditor.vue'))
 
 /** @typedef {import('@/features/nodes/lib/nodeSchemas.js').BusinessHoursValidation} BusinessHoursValidation */
 /** @typedef {import('@/features/nodes/lib/types.js').NodeKind} NodeKind */
@@ -295,7 +295,7 @@ async function deleteNode() {
 
 <template>
   <div class="pointer-events-none fixed inset-0 z-40">
-    <Transition name="flow-sheet-backdrop">
+    <Transition name="flow-sheet-backdrop" appear>
       <button
         v-if="open"
         class="pointer-events-auto absolute inset-0 bg-black/35"
@@ -303,7 +303,7 @@ async function deleteNode() {
         @click="requestClose"
       />
     </Transition>
-    <Transition name="flow-sheet-panel">
+    <Transition name="flow-sheet-panel" appear>
       <aside
         v-if="open"
         class="sheet pointer-events-auto absolute top-0 right-0 flex h-full w-full max-w-[520px] flex-col gap-0 border-l bg-background p-0 shadow-2xl outline-none"

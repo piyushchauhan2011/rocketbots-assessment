@@ -47,6 +47,8 @@ pnpm preview --host 127.0.0.1 # Local production preview
 
 TanStack Vue Query exclusively owns node records. Every mutation performs an optimistic cache update, writes the complete snapshot through `nodeRepository`, rolls back on error, and invalidates on settle. Pinia does not mirror records; it owns only UI state.
 
+The initial route ships only the application shell, query/store logic, and loading UI. The Vue Flow canvas is fetched after its viewport intersects and the browser becomes idle. Node details, the create dialog, and each type-specific editor are separate action-driven chunks, so message uploads, business-hours controls, and validation code are not downloaded until needed.
+
 ## Persistence and reset
 
 Node records are stored under `rocketbots-flow:v1`. Canvas positions use `rocketbots-flow-positions:v2`. To reset the assessment:

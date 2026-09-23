@@ -1,13 +1,12 @@
 <script setup>
 import { Redo2, RotateCcw, Undo2 } from '@lucide/vue'
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
 import {
@@ -15,11 +14,16 @@ import {
   positionsForAddedNodes,
   spliceNodes,
 } from '@/features/flow/lib/graph'
-import NodeDetailsSheet from '@/features/node-details/components/NodeDetailsSheet.vue'
-import CreateNodeDialog from '@/features/nodes/components/CreateNodeDialog.vue'
 import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
 import { useFlowUiStore } from '@/stores/flowUi'
+const FlowCanvas = defineAsyncComponent(() => import('@/features/flow/components/FlowCanvas.vue'))
+const NodeDetailsSheet = defineAsyncComponent(
+  () => import('@/features/node-details/components/NodeDetailsSheet.vue'),
+)
+const CreateNodeDialog = defineAsyncComponent(
+  () => import('@/features/nodes/components/CreateNodeDialog.vue'),
+)
 
 /** @typedef {import('@/features/nodes/lib/createNodeRecords.js').NodeDraft} NodeDraft */
 /** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
@@ -32,6 +36,17 @@ const router = useRouter()
 const canvas = ref(/** @type {FlowCanvasSurface | null} */ (null))
 const canvasElement = ref(/** @type {HTMLElement | null} */ (null))
 const createParentId = ref(/** @type {string | null} */ (null))
+const shouldLoadCanvas = ref(false)
+const shouldLoadNodeDetails = ref(route.name === 'node-details')
+watch(
+  () => route.name,
+  (name) => {
+    if (name === 'node-details') shouldLoadNodeDetails.value = true
+  },
+)
+/** @type {IntersectionObserver | null} */
+let canvasObserver = null
+let cancelCanvasLoad = () => {}
 const store = useFlowUiStore()
 const { canUndo, canRedo, undo, redo } = useFlowHistory()
 
@@ -53,6 +68,38 @@ useFlowShortcuts({ undo: undoHistory, redo: redoHistory })
 const query = useNodesQuery()
 const replaceMutation = useReplaceNodesMutation()
 const records = computed(/** @returns {NodeRecord[]} */ () => query.data.value || [])
+function scheduleCanvasLoad() {
+  if (typeof window.requestIdleCallback === 'function') {
+    const handle = window.requestIdleCallback(() => (shouldLoadCanvas.value = true), {
+      timeout: 1000,
+    })
+    cancelCanvasLoad = () => window.cancelIdleCallback(handle)
+    return
+  }
+  const handle = setTimeout(() => (shouldLoadCanvas.value = true), 0)
+  cancelCanvasLoad = () => clearTimeout(handle)
+}
+
+onMounted(() => {
+  if (!canvasElement.value || typeof IntersectionObserver === 'undefined') {
+    shouldLoadCanvas.value = true
+    return
+  }
+  canvasObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry?.isIntersecting) return
+      scheduleCanvasLoad()
+      canvasObserver?.disconnect()
+      canvasObserver = null
+    },
+    { rootMargin: '160px' },
+  )
+  canvasObserver.observe(canvasElement.value)
+})
+onBeforeUnmount(() => {
+  canvasObserver?.disconnect()
+  cancelCanvasLoad()
+})
 
 /** @param {string} nodeId */
 function openNode(nodeId) {
@@ -151,18 +198,27 @@ function submitCreate(draft) {
       <p id="flow-keyboard-help" class="sr-only">
         Arrow keys move between steps. Enter opens the selected step.
       </p>
-      <FlowCanvas
-        v-if="query.isSuccess.value && records.length"
-        ref="canvas"
-        :records="records"
-        @open-node="openNode"
-        @add-node="openCreate"
-      />
-      <div v-else-if="query.isPending.value" class="absolute inset-0 grid place-items-center p-6">
+      <Suspense v-if="query.isSuccess.value && records.length && shouldLoadCanvas">
+        <FlowCanvas ref="canvas" :records="records" @open-node="openNode" @add-node="openCreate" />
+        <template #fallback>
+          <div
+            class="absolute inset-0 grid place-items-center"
+            aria-label="Loading flow visualization"
+          >
+            <Skeleton class="h-24 w-64 rounded-xl" />
+          </div>
+        </template>
+      </Suspense>
+      <div
+        v-else-if="
+          query.isPending.value || (query.isSuccess.value && records.length && !shouldLoadCanvas)
+        "
+        class="absolute inset-0 grid place-items-center p-6"
+      >
         <Card class="w-full max-w-md border-border/70 shadow-xl shadow-slate-950/5">
           <CardHeader>
-            <Skeleton class="h-5 w-36" />
-            <Skeleton class="h-4 w-64 max-w-full" />
+            <CardTitle>Loading your flow</CardTitle>
+            <CardDescription>Preparing the canvas and saved positions.</CardDescription>
           </CardHeader>
           <CardContent class="grid grid-cols-2 gap-3" aria-label="Loading flow">
             <Skeleton class="h-24 rounded-xl" />
@@ -195,7 +251,11 @@ function submitCreate(draft) {
         </Card>
       </div>
     </main>
-    <NodeDetailsSheet v-if="query.isSuccess.value" :records="records" @closed="restoreFocus" />
+    <NodeDetailsSheet
+      v-if="query.isSuccess.value && shouldLoadNodeDetails"
+      :records="records"
+      @closed="restoreFocus"
+    />
     <CreateNodeDialog
       v-if="insertParent"
       :allow-hours="insertParent.type !== 'dateTime'"
