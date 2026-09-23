@@ -260,7 +260,7 @@ Then(
 Then(
   'the notification {string} is visible',
   stringStep(async function (message) {
-    await flow(this).expectTextVisible(message)
+    await flow(this).expectNotificationAboveDrawer(message)
   }),
 )
 

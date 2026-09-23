@@ -4,6 +4,6 @@
     "initialJavaScript": { "rawKiB": 230, "gzipKiB": 82 },
     "totalJavaScript": { "rawKiB": 525, "gzipKiB": 178 },
     "largestJavaScriptChunk": { "rawKiB": 170, "gzipKiB": 57 },
-    "totalStyles": { "rawKiB": 40, "gzipKiB": 8 }
+    "totalStyles": { "rawKiB": 52, "gzipKiB": 10 }
   }
 }
