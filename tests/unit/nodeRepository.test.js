@@ -83,7 +83,63 @@ describe('node repository results', () => {
       message: expect.stringContaining('Quota'),
     })
   })
+})
 
+describe('node repository boundary errors', () => {
+  it('classifies storage-read, network, and response-parse failures', async () => {
+    const unreadable = storage()
+    unreadable.getItem.mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    })
+    const readResult = await createNodeRepository({ storage: unreadable }).list()
+    expect(readResult.isErr() && readResult.error).toMatchObject({
+      type: 'storage',
+      message: 'Storage blocked',
+    })
+
+    const networkResult = await createNodeRepository({
+      storage: storage(),
+      fetchImpl: async () => {
+        throw new TypeError('Offline')
+      },
+    }).list()
+    expect(networkResult.isErr() && networkResult.error).toMatchObject({
+      type: 'network',
+      message: 'Offline',
+    })
+
+    const parseResult = await createNodeRepository({
+      storage: storage(),
+      fetchImpl: async () =>
+        /** @type {Response} */ (
+          /** @type {unknown} */ ({
+            ok: true,
+            json: async () => {
+              throw new SyntaxError('Broken response')
+            },
+          })
+        ),
+    }).list()
+    expect(parseResult.isErr() && parseResult.error).toMatchObject({
+      type: 'parse',
+      message: 'Broken response',
+    })
+  })
+
+  it('returns an error when clearing persisted state fails', async () => {
+    const store = storage('[]')
+    store.removeItem.mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    })
+    const result = await createNodeRepository({ storage: store }).clear()
+    expect(result.isErr() && result.error).toMatchObject({
+      type: 'storage',
+      message: 'Storage blocked',
+    })
+  })
+})
+
+describe('node repository persistence', () => {
   it('replaces and clears snapshots', async () => {
     const store = storage('[]')
     const repository = createNodeRepository({ storage: store })
