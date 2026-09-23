@@ -1,5 +1,5 @@
 <script setup>
-import { Clock3 } from 'lucide-vue-next'
+import { Clock3 } from '@lucide/vue'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({

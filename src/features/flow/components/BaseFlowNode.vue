@@ -1,6 +1,6 @@
 <script setup>
+import { Clock3, MessageSquare, MessageSquareText, Plus, Play, Split } from '@lucide/vue'
 import { Handle, Position } from '@vue-flow/core'
-import { Clock3, MessageSquare, MessageSquareText, Plus, Play, Split } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import { Card } from '@/components/ui/card'
