@@ -1,5 +1,6 @@
 <script setup>
 import { ImagePlus, Plus, Trash2 } from '@lucide/vue'
+import { ResultAsync } from 'neverthrow'
 import { ref } from 'vue'
 
 import { Button } from '@/components/ui/button'
@@ -40,14 +41,18 @@ function remove(index) {
 function appendText() {
   emit('update:modelValue', [...props.modelValue, { type: 'text', text: '' }])
 }
-/** @param {File} file @returns {Promise<string>} */
+/** @param {File} file */
 function readFile(file) {
-  return new Promise((resolve, reject) => {
+  const contents = new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('Could not read this image'))
+    reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(file)
   })
+  return ResultAsync.fromPromise(
+    /** @type {Promise<string>} */ (contents),
+    () => 'Could not read this image',
+  )
 }
 /** @param {Event} event */
 async function upload(event) {
@@ -68,13 +73,13 @@ async function upload(event) {
       attachment: `data:image/preview;base64,${'x'.repeat(Math.ceil((file.size * 4) / 3))}`,
     })
   }
-  try {
-    const attachments = await Promise.all(accepted.map((file) => readFile(file)))
+  const attachments = await ResultAsync.combine(accepted.map((file) => readFile(file)))
+  if (attachments.isErr()) {
+    uploadError.value = attachments.error
+  } else {
     /** @type {MessagePayloadItem[]} */
-    const additions = attachments.map((attachment) => ({ type: 'attachment', attachment }))
+    const additions = attachments.value.map((attachment) => ({ type: 'attachment', attachment }))
     emit('update:modelValue', [...props.modelValue, ...additions])
-  } catch (readError) {
-    uploadError.value = readError instanceof Error ? readError.message : String(readError)
   }
   target.value = ''
 }

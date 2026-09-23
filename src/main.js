@@ -8,6 +8,8 @@ import { router } from './router'
 // oxlint-disable-next-line import/no-unassigned-import
 import './assets/main.css'
 // oxlint-disable-next-line import/no-unassigned-import
+import 'vue-sonner/style.css'
+// oxlint-disable-next-line import/no-unassigned-import
 import '@vue-flow/core/dist/style.css'
 // oxlint-disable-next-line import/no-unassigned-import
 import '@vue-flow/core/dist/theme-default.css'

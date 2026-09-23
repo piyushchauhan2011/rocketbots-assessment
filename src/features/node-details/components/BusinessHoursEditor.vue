@@ -1,5 +1,6 @@
 <script setup>
 import { CalendarDays, Clock3 } from '@lucide/vue'
+import { Result } from 'neverthrow'
 import { computed } from 'vue'
 
 import { FieldError } from '@/components/ui/field-error'
@@ -40,19 +41,17 @@ const timezones = computed(() => [
 
 /** @param {string} zone */
 function formatTimezone(zone) {
-  let offset = 'GMT+00:00'
-  try {
-    const raw =
-      new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' })
-        .formatToParts(new Date())
-        .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
-    const match = raw.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/)
-    if (match) {
-      offset = `GMT${match[1]}${match[2].padStart(2, '0')}:${match[3] ?? '00'}`
-    }
-  } catch {
-    offset = 'GMT+00:00'
-  }
+  const offset = Result.fromThrowable(
+    () => {
+      const raw =
+        new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' })
+          .formatToParts(new Date())
+          .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
+      const match = raw.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/)
+      return match ? `GMT${match[1]}${match[2].padStart(2, '0')}:${match[3] ?? '00'}` : 'GMT+00:00'
+    },
+    () => 'GMT+00:00',
+  )().unwrapOr('GMT+00:00')
   const name = zone === 'UTC' ? 'UTC' : zone.replaceAll('_', ' ')
   return `(${offset}) ${name}`
 }

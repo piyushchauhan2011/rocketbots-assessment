@@ -94,6 +94,28 @@ export class FlowPage {
   }
 
   /** @param {string} text */
+  async expectNotificationAboveDrawer(text) {
+    await expect(this.page.locator('[data-sonner-toaster]')).toHaveAttribute(
+      'data-x-position',
+      'left',
+    )
+    const notification = this.page.locator('[data-sonner-toast]').filter({ hasText: text }).last()
+    await expect(notification).toBeInViewport()
+    await expect
+      .poll(() =>
+        notification.evaluate((element) => {
+          const rect = element.getBoundingClientRect()
+          const top = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          )
+          return element.contains(top)
+        }),
+      )
+      .toBe(true)
+  }
+
+  /** @param {string} text */
   async expectTextAbsent(text) {
     await expect(this.page.getByText(text, { exact: true })).toHaveCount(0)
   }

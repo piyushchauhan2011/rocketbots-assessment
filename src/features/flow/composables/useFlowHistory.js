@@ -1,3 +1,4 @@
+import { ok } from 'neverthrow'
 import { computed } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -19,38 +20,36 @@ export function useFlowHistory() {
   async function apply(command, direction) {
     if (command.kind === 'move') {
       store.setPosition(command.nodeId, command[direction])
-      return
+      return ok(undefined)
     }
     const record = direction === 'before' ? command.beforeRecord : command.afterRecord
-    await updateMutation.mutateAsync(record)
+    return updateMutation.mutateResult(record)
   }
   async function undo() {
     if (!canUndo.value) return null
     const command = store.takeUndo()
     if (!command) return null
-    try {
-      await apply(command, 'before')
-      return command
-    } catch (error) {
+    const result = await apply(command, 'before')
+    if (result.isErr()) {
       store.redoStack.pop()
       store.undoStack.push(command)
-      toast.error(error instanceof Error ? error.message : String(error))
+      toast.error(result.error.message)
       return null
     }
+    return command
   }
   async function redo() {
     if (!canRedo.value) return null
     const command = store.takeRedo()
     if (!command) return null
-    try {
-      await apply(command, 'after')
-      return command
-    } catch (error) {
+    const result = await apply(command, 'after')
+    if (result.isErr()) {
       store.undoStack.pop()
       store.redoStack.push(command)
-      toast.error(error instanceof Error ? error.message : String(error))
+      toast.error(result.error.message)
       return null
     }
+    return command
   }
   return { canUndo, canRedo, undo, redo }
 }

@@ -1,14 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { ok, ResultAsync } from 'neverthrow'
 
 import { nodeRepository } from '../api/nodeRepository'
 
 /** @typedef {import('../lib/types.js').NodeId} NodeId */
 /** @typedef {import('../lib/types.js').NodeRecord} NodeRecord */
+/** @typedef {import('../api/nodeRepository.js').NodeRepositoryError} NodeRepositoryError */
+/** @typedef {import('neverthrow').Result<NodeRecord[], NodeRepositoryError>} NodesResult */
+
+/** @typedef {NodeRepositoryError | { type: 'mutation', message: string, cause?: unknown }} NodeMutationError */
+
+/** @param {unknown} cause @returns {NodeMutationError} */
+function mutationError(cause) {
+  const message = cause instanceof Error ? cause.message : 'Unable to update flow'
+  return { type: 'mutation', message, cause }
+}
 
 export const FLOW_NODES_QUERY_KEY = ['flow-nodes']
 
 export function useNodesQuery() {
-  return useQuery({ queryKey: FLOW_NODES_QUERY_KEY, queryFn: () => nodeRepository.list() })
+  return useQuery({
+    queryKey: FLOW_NODES_QUERY_KEY,
+    queryFn: async () => await nodeRepository.list(),
+  })
 }
 
 /**
@@ -22,27 +36,45 @@ export function useNodesQuery() {
  */
 function useReplaceMutation(transform) {
   const queryClient = useQueryClient()
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async () => {
-      const optimistic =
-        /** @type {NodeRecord[] | undefined} */ (queryClient.getQueryData(FLOW_NODES_QUERY_KEY)) ??
-        []
-      return nodeRepository.replace(optimistic)
+      const cached =
+        /** @type {NodesResult | undefined} */ (queryClient.getQueryData(FLOW_NODES_QUERY_KEY)) ??
+        ok([])
+      const optimistic = cached.isOk() ? cached.value : []
+      return await nodeRepository.replace(optimistic)
     },
     /** @param {TVariables} variables */
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: FLOW_NODES_QUERY_KEY })
       const previous =
-        /** @type {NodeRecord[] | undefined} */ (queryClient.getQueryData(FLOW_NODES_QUERY_KEY)) ??
-        []
-      queryClient.setQueryData(FLOW_NODES_QUERY_KEY, transform(previous, variables))
+        /** @type {NodesResult | undefined} */ (queryClient.getQueryData(FLOW_NODES_QUERY_KEY)) ??
+        ok([])
+      const nodes = previous.isOk() ? previous.value : []
+      queryClient.setQueryData(FLOW_NODES_QUERY_KEY, ok(transform(nodes, variables)))
       return { previous }
+    },
+    onSuccess: (result, _variables, context) => {
+      if (result.isErr() && context) {
+        queryClient.setQueryData(FLOW_NODES_QUERY_KEY, context.previous)
+      }
     },
     onError: (_error, _variables, context) => {
       if (context) queryClient.setQueryData(FLOW_NODES_QUERY_KEY, context.previous)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: FLOW_NODES_QUERY_KEY }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: FLOW_NODES_QUERY_KEY })
+    },
   })
+  return {
+    ...mutation,
+    /** @param {TVariables} variables */
+    mutateResult(variables) {
+      return ResultAsync.fromPromise(mutation.mutateAsync(variables), mutationError).andThen(
+        (result) => result,
+      )
+    },
+  }
 }
 
 export function useCreateNodeMutation() {
