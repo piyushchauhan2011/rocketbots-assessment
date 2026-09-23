@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit --project jsconfig.native.json && node scripts/vue-typecheck.cjs --noEmit --project jsconfig.json",
+    "typecheck": "tsc --noEmit --project jsconfig.native.json && node scripts/vue-typecheck.cjs --noEmit --project jsconfig.json && pnpm typecheck:e2e",
+    "typecheck:e2e": "tsc --noEmit --project jsconfig.e2e.json",
     "preview": "vite preview",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",

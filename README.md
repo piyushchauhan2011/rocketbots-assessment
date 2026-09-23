@@ -28,6 +28,7 @@ pnpm format                    # Apply Oxfmt
 pnpm format:check              # Verify formatting
 pnpm lint                      # Oxlint quality gate
 pnpm typecheck                 # Check JSDoc contracts and Vue templates
+pnpm typecheck:e2e             # Strict-check Cucumber, World, and Page Object JSDoc
 pnpm test:unit                 # Vitest unit and integration tests
 pnpm test:unit:coverage        # Vitest with enforced coverage thresholds
 pnpm exec playwright install chromium

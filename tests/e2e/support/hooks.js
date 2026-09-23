@@ -5,11 +5,14 @@ import { After, AfterAll, BeforeAll, setDefaultTimeout, Status } from '@cucumber
 import { chromium } from '@playwright/test'
 
 const baseUrl = 'http://127.0.0.1:4174'
+/** @type {import('@playwright/test').Browser | undefined} */
 let browser
+/** @type {import('node:child_process').ChildProcess | undefined} */
 let server
 let serverOutput = ''
 
 setDefaultTimeout(30_000)
+/** @param {number} [attempt] */
 async function waitForServer(attempt = 0) {
   if (server?.exitCode !== null) {
     throw new Error(`Vite exited before becoming ready.\n${serverOutput}`)
@@ -46,12 +49,15 @@ BeforeAll(async () => {
   browser = await chromium.launch()
 })
 
-After(async function ({ result }) {
-  if (result?.status === Status.FAILED && this.page) {
-    await this.attach(await this.page.screenshot({ fullPage: true }), 'image/png')
-  }
-  await this.dispose()
-})
+After(
+  /** @this {import('./world.js').FlowWorld} */
+  async function ({ result }) {
+    if (result?.status === Status.FAILED && this.page) {
+      await this.attach(await this.page.screenshot({ fullPage: true }), 'image/png')
+    }
+    await this.dispose()
+  },
+)
 
 AfterAll(async () => {
   await browser?.close()
@@ -61,6 +67,7 @@ AfterAll(async () => {
   else process.kill(-server.pid, 'SIGTERM')
 })
 
+/** @returns {import('@playwright/test').Browser} */
 export function getBrowser() {
   if (!browser) throw new Error('Playwright browser has not started')
   return browser

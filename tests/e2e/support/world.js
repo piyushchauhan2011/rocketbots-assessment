@@ -6,15 +6,18 @@ import { devices } from '@playwright/test'
 import { FlowPage } from '../pages/FlowPage.js'
 import { baseUrl, getBrowser } from './hooks.js'
 
+/** @typedef {'desktop' | 'mobile'} DeviceName */
+
 const payload = JSON.parse(
   readFileSync(new URL('../../fixtures/payload.json', import.meta.url), 'utf8'),
 )
 
 export class FlowWorld extends World {
-  context = null
-  page = null
-  flow = null
+  context = /** @type {import('@playwright/test').BrowserContext | null} */ (null)
+  page = /** @type {import('@playwright/test').Page | null} */ (null)
+  flow = /** @type {FlowPage | null} */ (null)
 
+  /** @param {DeviceName} deviceName */
   async useDevice(deviceName) {
     const device =
       deviceName === 'mobile'
