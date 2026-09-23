@@ -331,7 +331,7 @@ async function deleteNode() {
           </footer>
         </template>
         <template v-else-if="draft">
-          <header class="border-b bg-white p-6 pr-16 text-left">
+          <header class="border-b bg-card p-6 pr-16 text-left">
             <div class="flex items-start gap-3">
               <span
                 class="grid size-9 shrink-0 place-items-center rounded-lg text-white shadow-sm"
@@ -340,7 +340,7 @@ async function deleteNode() {
                 <component :is="headerMeta.icon" :size="18" />
               </span>
               <span class="min-w-0">
-                <h2 class="truncate text-lg font-semibold text-slate-900">
+                <h2 class="truncate text-lg font-semibold text-card-foreground">
                   {{ draft.name || headerMeta.label }}
                 </h2>
                 <p class="mt-1 text-sm leading-5 text-muted-foreground">{{ headerMeta.helper }}</p>

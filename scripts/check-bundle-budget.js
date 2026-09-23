@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { gzipSync } from 'node:zlib'
 
@@ -103,9 +103,38 @@ function violations(size, limit) {
   return failures
 }
 
+/**
+ * @param {string} reportPath
+ * @param {string[]} rows
+ * @param {string[]} failures
+ */
+function writeMarkdownReport(reportPath, rows, failures) {
+  const summary =
+    failures.length === 0
+      ? 'All production bundle budgets passed.'
+      : `${failures.length} production bundle budget limit${failures.length === 1 ? '' : 's'} exceeded.`
+  writeFileSync(
+    reportPath,
+    [
+      '## Bundle budget report',
+      '',
+      summary,
+      '',
+      '| Metric | Raw / limit | Gzip / limit | Status |',
+      '| --- | ---: | ---: | --- |',
+      ...rows,
+      '',
+      'Initial JavaScript includes the configured initial entries and their static imports. Deferred chunks count toward total JavaScript and the largest-chunk ceiling.',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+}
+
 function main() {
   const distDirectory = path.resolve(option('--dist', 'dist'))
   const configPath = path.resolve(option('--config', 'bundle-budgets.json'))
+  const reportPath = path.resolve(option('--report', 'bundle-budget-report.md'))
   const manifestPath = path.join(distDirectory, '.vite', 'manifest.json')
   const config = /** @type {BudgetConfig} */ (JSON.parse(readFileSync(configPath, 'utf8')))
   const manifest = /** @type {Manifest} */ (JSON.parse(readFileSync(manifestPath, 'utf8')))
@@ -127,6 +156,7 @@ function main() {
   }
 
   const failures = []
+  const reportRows = []
   console.log('\nBundle budget report')
   for (const [metric, label] of Object.entries(metricLabels)) {
     const size = metrics[metric]
@@ -136,8 +166,13 @@ function main() {
     console.log(
       `${status.padEnd(4)}  ${label.padEnd(26)} ${formatKiB(size.raw).padStart(11)} raw / ${formatKiB(size.gzip).padStart(11)} gzip`,
     )
+    reportRows.push(
+      `| ${label} | ${formatKiB(size.raw)} / ${limit.rawKiB} KiB | ${formatKiB(size.gzip)} / ${limit.gzipKiB} KiB | ${status === 'PASS' ? 'Pass' : 'Fail'} |`,
+    )
     failures.push(...metricFailures.map((failure) => `${label}: ${failure}`))
   }
+
+  writeMarkdownReport(reportPath, reportRows, failures)
 
   if (failures.length > 0) {
     console.error('\nBundle budgets exceeded:')

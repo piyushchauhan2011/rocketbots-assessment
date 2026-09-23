@@ -4,4 +4,5 @@ coverage/
 playwright-report/
 test-results/
 cucumber-report.html
+bundle-budget-report.md
 .DS_Store

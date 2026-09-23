@@ -77,7 +77,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown))
       @click="open = !open"
     >
       <span>{{ formatTime(modelValue) }}</span>
-      <Clock3 :size="14" class="shrink-0 text-slate-500" />
+      <Clock3 :size="14" class="shrink-0 text-muted-foreground" />
     </button>
     <ul
       v-if="open"

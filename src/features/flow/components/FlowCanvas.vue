@@ -63,15 +63,22 @@ const bridge = ref(/** @type {ViewportBridgeSurface | null} */ (null))
 const dragStart = ref(/** @type {DragStart | null} */ (null))
 
 const nodes = computed(() =>
-  buildFlowNodes(props.records, store.positions).map((node) => ({
-    ...node,
-    data: {
-      ...node.data,
-      onOpen: openNode,
-      onAdd: (/** @type {string} */ parentId) => emit('add-node', parentId),
-      onMove: moveSelection,
-    },
-  })),
+  buildFlowNodes(props.records, store.positions)
+    .map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        onOpen: openNode,
+        onAdd: (/** @type {string} */ parentId) => emit('add-node', parentId),
+        onMove: moveSelection,
+      },
+    }))
+    .sort(
+      (left, right) =>
+        left.position.y - right.position.y ||
+        left.position.x - right.position.x ||
+        String(left.id).localeCompare(String(right.id)),
+    ),
 )
 const edges = computed(() => buildFlowEdges(props.records))
 

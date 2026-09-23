@@ -37,6 +37,12 @@ jobs:
           sort-by: lines-asc
       - name: Build and enforce bundle budgets
         run: pnpm build
+      - name: Publish bundle budget report
+        if: always() && github.event_name == 'pull_request' && hashFiles('bundle-budget-report.md') != ''
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: bundle-budget-report
+          path: bundle-budget-report.md
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Browser tests

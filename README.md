@@ -40,6 +40,7 @@ pnpm preview --host 127.0.0.1 # Local production preview
 
 `pnpm build` generates Vite’s manifest and fails if `bundle-budgets.json` limits are exceeded. Budgets cover initial-route JavaScript, total JavaScript, the largest JavaScript chunk, and total CSS in both raw and gzip bytes.
 The initial-route measurement starts from `initialEntries` and recursively includes their static manifest imports; action-driven dynamic chunks remain outside that budget but count toward total JavaScript and the per-chunk ceiling. Adjust limits deliberately in the budget file when an accepted product change needs additional headroom.
+CI publishes the latest results as a sticky pull-request comment, updating the same comment on every run instead of adding duplicates.
 
 ## Architecture
 
