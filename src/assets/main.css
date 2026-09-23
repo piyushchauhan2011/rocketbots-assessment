@@ -86,7 +86,7 @@
 
 @layer components {
   .flow-add-trigger {
-    @apply grid size-7 place-items-center rounded-full border bg-white;
+    @apply grid size-7 place-items-center rounded-full border bg-background;
   }
 }
 

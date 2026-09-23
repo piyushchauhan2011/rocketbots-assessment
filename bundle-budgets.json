@@ -1,0 +1,9 @@
+{
+  "initialEntries": ["index.html", "src/views/FlowView.vue"],
+  "limits": {
+    "initialJavaScript": { "rawKiB": 230, "gzipKiB": 82 },
+    "totalJavaScript": { "rawKiB": 525, "gzipKiB": 178 },
+    "largestJavaScriptChunk": { "rawKiB": 170, "gzipKiB": 57 },
+    "totalStyles": { "rawKiB": 40, "gzipKiB": 8 }
+  }
+}

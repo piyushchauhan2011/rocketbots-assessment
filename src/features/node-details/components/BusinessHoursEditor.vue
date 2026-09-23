@@ -76,7 +76,9 @@ function update(index, field, value) {
 
 <template>
   <section class="mt-6 grid gap-4 border-t pt-6">
-    <div class="grid grid-cols-[4.5rem_1fr] items-center px-1 text-xs font-medium text-slate-500">
+    <div
+      class="grid grid-cols-[4.5rem_1fr] items-center px-1 text-xs font-medium text-muted-foreground"
+    >
       <span class="inline-flex items-center gap-1.5">
         <CalendarDays :size="14" />
         Day
@@ -86,13 +88,13 @@ function update(index, field, value) {
         Time
       </span>
     </div>
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden rounded-xl border bg-card">
       <div
         v-for="(time, index) in times"
         :key="time.day"
         class="grid grid-cols-[4.5rem_1fr] items-start gap-2 border-b px-3 py-2.5 last:border-b-0"
       >
-        <span class="pt-2 text-sm font-medium text-slate-700">
+        <span class="pt-2 text-sm font-medium text-card-foreground">
           {{ labels[time.day] || time.day }}
         </span>
         <div class="grid min-w-0 gap-1.5">
@@ -113,7 +115,7 @@ function update(index, field, value) {
               "
               @update:model-value="update(index, 'startTime', $event)"
             />
-            <span class="shrink-0 text-sm text-slate-400">to</span>
+            <span class="shrink-0 text-sm text-muted-foreground">to</span>
             <TimeField
               :id="`end-${time.day}`"
               label="End"

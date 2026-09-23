@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --manifest && pnpm bundle:check",
+    "bundle:check": "node scripts/check-bundle-budget.js",
     "typecheck": "tsc --noEmit --project jsconfig.native.json && node scripts/vue-typecheck.cjs --noEmit --project jsconfig.json && pnpm typecheck:e2e",
     "typecheck:e2e": "tsc --noEmit --project jsconfig.e2e.json",
     "preview": "vite preview",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --deny-warnings src tests vite.config.js cucumber.js",
+    "lint": "oxlint --deny-warnings src tests scripts/check-bundle-budget.js vite.config.js cucumber.js",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
     "test:e2e": "cucumber-js"
