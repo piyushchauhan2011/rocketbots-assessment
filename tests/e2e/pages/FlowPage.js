@@ -95,6 +95,10 @@ export class FlowPage {
 
   /** @param {string} text */
   async expectNotificationAboveDrawer(text) {
+    await expect(this.page.locator('[data-sonner-toaster]')).toHaveAttribute(
+      'data-x-position',
+      'left',
+    )
     const notification = this.page.locator('[data-sonner-toast]').filter({ hasText: text }).last()
     await expect(notification).toBeInViewport()
     await expect
