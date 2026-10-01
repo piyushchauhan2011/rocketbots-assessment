@@ -20,4 +20,5 @@ Open [http://localhost:5173](http://localhost:5173).
 - [Architecture](docs/architecture.md)
 - [Design decisions](docs/design-decisions.md)
 - [Development and quality](docs/development.md)
+- [Contributions and releases](docs/development.md#contributions-versioning-and-releases)
 - API reference: run `pnpm docs:build`, then open `docs/api/index.html`
