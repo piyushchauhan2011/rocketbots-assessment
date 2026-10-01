@@ -80,6 +80,14 @@ A separate non-blocking duplication job scans `src` and publishes its measuremen
 
 The PR-title job checks Changesets using `pnpm changeset status --since origin/main`. It fetches full Git history so the detached PR checkout has a merge base with the remote default branch; a shallow checkout is insufficient. Only the same-repository `changeset-release/main` version PR skips the changeset-presence check because versioning consumes its changesets. Its title and quality checks still run; a fork using that branch name is not exempt.
 
+## Dependency updates
+
+`.github/dependabot.yml` schedules weekly checks on Mondays for the root pnpm dependencies (`npm` ecosystem) and GitHub Actions. Each ecosystem can have up to five open version-update PRs. Major updates are not excluded; review breaking changes before merging. PR titles use Conventional Commit prefixes: `chore(deps)` / `chore(deps-dev)` for packages and `ci(deps)` for actions.
+
+Dependabot does not generate changesets. Before merging an update PR, check out its branch and add a versioned changeset for release-worthy dependency changes or an empty changeset for internal tooling/workflow maintenance, following the checklist below. The existing title, changeset, and quality checks remain required; updates are not automatically merged.
+
+Version-update scheduling starts after this configuration is merged into the default branch. Dependabot security updates are a separate repository setting under **Settings → Advanced Security**; this file does not enable that setting.
+
 ## Contributions, versioning, and releases
 
 ### Developer checklist
