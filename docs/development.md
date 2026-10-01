@@ -19,6 +19,9 @@
 | `pnpm exec playwright install chromium` | Install the E2E browser                                      |
 | `pnpm test:e2e`                         | Run Cucumber scenarios through Playwright                    |
 | `pnpm bundle:check`                     | Recheck an existing `dist` bundle                            |
+| `pnpm changeset`                        | Describe a release-worthy change and select its SemVer bump  |
+| `pnpm changeset status`                 | Inspect pending release versions                             |
+| `pnpm commitlint --edit`                | Validate the latest local commit message                     |
 
 ## Component workshop
 
@@ -54,6 +57,60 @@ Playwright intercepts the public payload with `tests/fixtures/payload.json`. Cuc
 GitHub Actions uses Node.js 22 and a frozen pnpm install. The quality job gates formatting, linting, checked JavaScript and Vue templates, TypeDoc generation, coverage, production build budgets, and Chromium E2E workflows. Coverage and Cucumber reports are uploaded for diagnosis.
 
 A separate non-blocking duplication job scans `src` and publishes its measurements on pull requests.
+
+## Contributions, versioning, and releases
+
+### Developer checklist
+
+1. Use a Conventional Commit PR title: `<type>(<optional scope>): <description>`. Examples: `feat(flow): add step duplication`, `fix(editor): preserve selection after deletion`, and `docs: clarify setup`. Supported types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`. Use `!` for a breaking change, for example `feat(storage)!: change the saved-flow schema`; describe the break and migration in the PR and changeset.
+2. For a release-worthy change, run `pnpm changeset`, select `rocketbots-flow-assessment`, choose a bump, and write a user-facing summary. Commit the generated `.changeset/*.md` with the implementation. The package is private but is intentionally included in versioning.
+3. Run the usual quality checks and `pnpm changeset status`. CI validates the PR title and parses pending changesets; reviewers must check that release-worthy changes include a changeset and that the bump is correct. CI does not infer whether a changeset is required.
+4. Squash-merge the PR using its validated title as the squash commit subject. Local commits should use the same convention; `pnpm commitlint --edit` checks the latest commit, but no Git hooks are installed. PR-title validation is the CI enforcement point.
+
+Changesets, **not commit types**, determine the version bump:
+
+| Bump    | Use for                                                  | From `1.0.0` |
+| ------- | -------------------------------------------------------- | ------------ |
+| `patch` | Backward-compatible fixes and release-worthy maintenance | `1.0.1`      |
+| `minor` | Backward-compatible functionality                        | `1.1.0`      |
+| `major` | Breaking behavior or persisted-data contract changes     | `2.0.0`      |
+
+Multiple pending changesets are combined into one release using the highest required bump, not one increment per PR. Documentation-only, test-only, and internal CI changes normally need no changeset unless they should appear in release notes. Do not add a changeset to the generated version PR itself.
+
+Example changeset:
+
+```markdown
+---
+'rocketbots-flow-assessment': minor
+---
+
+Add step duplication to the editor. Duplicated steps retain message content and can be edited independently.
+```
+
+Release notes come from these summaries, not a raw commit log. Describe the behavior, impact, and any migration; avoid summaries such as “fix bug”. Do not manually bump `package.json` or edit generated `CHANGELOG.md` as part of ordinary feature PRs.
+
+### Automated release lifecycle
+
+1. After changes merge to `main`, the CI quality job must pass before release automation runs.
+2. With pending changesets, the bot creates or updates **`chore(release): version application`** on `changeset-release/main`. It updates `package.json`, refreshes the pnpm lockfile, generates `CHANGELOG.md`, and consumes the included changesets.
+3. Review the version and notes, wait for PR checks, then squash-merge that version PR. No local `pnpm version:release` or `pnpm release` command is needed.
+4. Once quality checks on `main` pass, the bot creates a GitHub Release named/tagged `vX.Y.Z` at that workflow's commit, using only that version's changelog section as its release notes.
+
+The package remains `private: true`: **nothing is published to npm**. This workflow does not deploy application assets or attach build artifacts. Changesets' built-in GitHub release creation is disabled because this private application's release script creates its own `vX.Y.Z` release and tag.
+
+Release runs are serialized. Later runs skip an already-existing release. Before the first version PR generates a changelog, a run without changesets is a no-op. The initial tooling changeset requests a patch release from the current `1.0.0` baseline; it does not invent historical release notes.
+
+### One-time maintainer setup
+
+- In GitHub **Settings → Actions → General**, permit Actions to create pull requests. Ensure repository/organization policies allow the release bot to write contents and pull requests.
+- Add an Actions repository secret named **`RELEASE_TOKEN`**: a fine-grained PAT limited to this repository with **Contents: read/write** and **Pull requests: read/write**. Use a bot account where possible; grant **Workflows: read/write** if a version PR includes workflow-file changes. Keep the token unexpired and approved by organization policy. It is used only in the release job on `main`, never passed to PR code.
+- A dedicated token is required because PRs opened with the default `GITHUB_TOKEN` do not trigger the usual PR workflows. The token lets generated version PRs receive the same quality and title checks as developer PRs.
+- Enable squash merging, set the default squash commit subject to the PR title, and disable merge/rebase merging to keep `main` conventional.
+- Protect `main` against direct pushes and require the **quality** and **Conventional PR title** checks before merging. Do not give the bot a protection bypass; it opens a version PR for review like any developer.
+
+If automation fails, inspect the **Version PR or GitHub Release** job, fix the secret/permissions or reported error, and rerun the failed job. The **CI** workflow also supports **Run workflow** on `main` for recovery. Existing releases are not duplicated. Never delete release tags just to retry a run.
+
+References: [Changesets](https://github.com/changesets/changesets), [Changesets action v1](https://github.com/changesets/action/tree/maintenance/v1), and [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
 ## Bundle budgets
 

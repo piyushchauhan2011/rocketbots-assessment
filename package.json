@@ -15,10 +15,14 @@
     "docs:build": "typedoc",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --deny-warnings src tests scripts/check-bundle-budget.js vite.config.js cucumber.js",
+    "lint": "oxlint --deny-warnings src tests scripts vite.config.js cucumber.js commitlint.config.js",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
-    "test:e2e": "cucumber-js"
+    "test:e2e": "cucumber-js",
+    "changeset": "changeset",
+    "version:release": "changeset version && pnpm install --lockfile-only && oxfmt package.json CHANGELOG.md pnpm-lock.yaml",
+    "release": "node scripts/release.js",
+    "commitlint": "commitlint"
   },
   "dependencies": {
     "@lucide/vue": "1.47.0",
@@ -40,6 +44,9 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "@cucumber/cucumber": "13.2.1",
     "@playwright/test": "1.63.0",
     "@storybook/addon-a11y": "10.6.0",
