@@ -18,6 +18,8 @@
 | `pnpm test:unit:coverage`               | Run Vitest with enforced coverage thresholds                 |
 | `pnpm exec playwright install chromium` | Install the E2E browser                                      |
 | `pnpm test:e2e`                         | Run Cucumber scenarios through Playwright                    |
+| `pnpm report:e2e`                       | Generate a standalone Allure HTML report                     |
+| `pnpm report:e2e:open`                  | Serve and open the generated Allure report                   |
 | `pnpm bundle:check`                     | Recheck an existing `dist` bundle                            |
 | `pnpm changeset`                        | Describe a release-worthy change and select its SemVer bump  |
 | `pnpm changeset status`                 | Inspect pending release versions                             |
@@ -53,9 +55,26 @@ Vitest covers graph handling, malformed relationships and cycles, validation bou
 
 Playwright intercepts the public payload with `tests/fixtures/payload.json`. Cucumber scenarios exercise editing, upload persistence, creation, Business Hours, deletion, history, keyboard navigation, and direct routes at desktop and mobile widths.
 
+### E2E reports
+
+`pnpm test:e2e` writes both `cucumber-report.html` and Allure results in `allure-results/`. Each run clears previous Allure results so scenarios from older runs are not included. Scenario steps, durations, assertion errors, and screenshots attached by the failure hook are captured by the [Allure Cucumber.js adapter](https://allurereport.org/docs/cucumberjs-configuration/).
+
+Install Java 21 and ensure `java` is on `PATH` (or set `JAVA_HOME`) to generate reports. Java is not required to run the scenarios.
+
+```sh
+pnpm test:e2e
+# Run this separately even if the tests failed:
+pnpm report:e2e
+pnpm report:e2e:open
+```
+
+The generator replaces `allure-report/` and produces a standalone `index.html`, which can also be opened directly without a server or Java. Both Allure directories are ignored by Git.
+
 ## Continuous integration
 
-GitHub Actions uses Node.js 22 and a frozen pnpm install. The quality job gates formatting, linting, checked JavaScript and Vue templates, TypeDoc generation, coverage, production build budgets, and Chromium E2E workflows. Coverage and Cucumber reports are uploaded for diagnosis.
+GitHub Actions uses Node.js 22 and a frozen pnpm install. The quality job gates formatting, linting, checked JavaScript and Vue templates, TypeDoc generation, coverage, production build budgets, and Chromium E2E workflows. Coverage and Cucumber reports are uploaded for diagnosis. Java 21 is provisioned for Allure generation; when scenario results exist, report generation and artifact uploads run even after browser-test failure. Test failures still fail the job.
+
+To inspect an E2E run, open its **Actions → CI → Artifacts**, download **allure-report**, extract it, and open `index.html`. The **allure-results** artifact contains raw results and attachments for regeneration or external tooling. Reports are per-run artifacts, not a hosted dashboard or cross-run history.
 
 A separate non-blocking duplication job scans `src` and publishes its measurements on pull requests.
 
