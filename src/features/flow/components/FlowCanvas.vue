@@ -1,6 +1,7 @@
 <script setup>
+import { Grid2X2 } from '@lucide/vue'
 import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
+import { ControlButton, Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
 import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 
@@ -61,6 +62,7 @@ const emit = defineEmits(['open-node', 'add-node'])
 const store = useFlowUiStore()
 const bridge = ref(/** @type {ViewportBridgeSurface | null} */ (null))
 const dragStart = ref(/** @type {DragStart | null} */ (null))
+const showGrid = ref(true)
 
 const nodes = computed(() =>
   buildFlowNodes(props.records, store.positions)
@@ -146,8 +148,17 @@ defineExpose({ focusNode, revealNode })
     @node-drag-stop="onDragStop"
   >
     <ViewportBridge ref="bridge" />
-    <Background :gap="20" pattern-color="oklch(0.88 0.01 255)" :size="1" />
-    <Controls position="bottom-right" />
+    <Background v-if="showGrid" :gap="20" pattern-color="oklch(0.88 0.01 255)" :size="1" />
+    <Controls position="bottom-right">
+      <ControlButton
+        aria-label="Toggle canvas grid"
+        :aria-pressed="showGrid"
+        :title="showGrid ? 'Hide canvas grid' : 'Show canvas grid'"
+        @click="showGrid = !showGrid"
+      >
+        <Grid2X2 aria-hidden="true" />
+      </ControlButton>
+    </Controls>
     <template #node-trigger="slotProps"
       ><BaseFlowNode v-bind="slotProps" node-type="trigger"
     /></template>

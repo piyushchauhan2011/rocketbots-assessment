@@ -39,6 +39,7 @@ Stories live beside the components they describe. Prefer realistic assessment re
 - Business Hours requires seven unique weekdays, valid `HH:mm` values, and a start before the end. Supported timezones are UTC, Asia/Kuala_Lumpur, and the current browser IANA timezone when distinct.
 - Deleting a normal step reconnects its children to its parent. Deleting Business Hours also removes its Success and Failure connector records while leaving records below those paths in the flow.
 - Existing node positions remain stable when records are added or removed.
+- The grid button in the bottom-right canvas controls shows or hides the dot grid. It supports pointer and keyboard activation and exposes its state to assistive technology. Hiding the grid does not move nodes or disable 16-pixel snapping; the grid is visible again when the canvas is reloaded.
 
 ## Accessibility and history
 
