@@ -59,7 +59,7 @@ GitHub Actions uses Node.js 22 and a frozen pnpm install. The quality job gates 
 
 A separate non-blocking duplication job scans `src` and publishes its measurements on pull requests.
 
-The PR-title job checks Changesets using `pnpm changeset status --since origin/main`. It fetches full Git history so the detached PR checkout has a merge base with the remote default branch; a shallow checkout is insufficient.
+The PR-title job checks Changesets using `pnpm changeset status --since origin/main`. It fetches full Git history so the detached PR checkout has a merge base with the remote default branch; a shallow checkout is insufficient. Only the same-repository `changeset-release/main` version PR skips the changeset-presence check because versioning consumes its changesets. Its title and quality checks still run; a fork using that branch name is not exempt.
 
 ## Contributions, versioning, and releases
 
@@ -67,7 +67,7 @@ The PR-title job checks Changesets using `pnpm changeset status --since origin/m
 
 1. Use a Conventional Commit PR title: `<type>(<optional scope>): <description>`. Examples: `feat(flow): add step duplication`, `fix(editor): preserve selection after deletion`, and `docs: clarify setup`. Supported types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`. Use `!` for a breaking change, for example `feat(storage)!: change the saved-flow schema`; describe the break and migration in the PR and changeset.
 2. For a release-worthy change, run `pnpm changeset`, select `rocketbots-flow-assessment`, choose a bump, and write a user-facing summary. Commit the generated `.changeset/*.md` with the implementation. The package is private but is intentionally included in versioning.
-3. Run the usual quality checks and `pnpm changeset status`. CI validates the PR title and parses pending changesets; reviewers must check that release-worthy changes include a changeset and that the bump is correct. CI does not infer whether a changeset is required.
+3. Run the usual quality checks and `pnpm changeset status`. CI validates the PR title and requires a changeset for changed packages; reviewers must check whether it needs a release bump and that the bump is correct. For a non-release change, run `pnpm changeset --empty` and commit the generated file.
 4. Squash-merge the PR using its validated title as the squash commit subject. Local commits should use the same convention; `pnpm commitlint --edit` checks the latest commit, but no Git hooks are installed. PR-title validation is the CI enforcement point.
 
 Changesets, **not commit types**, determine the version bump:
@@ -78,7 +78,7 @@ Changesets, **not commit types**, determine the version bump:
 | `minor` | Backward-compatible functionality                        | `1.1.0`      |
 | `major` | Breaking behavior or persisted-data contract changes     | `2.0.0`      |
 
-Multiple pending changesets are combined into one release using the highest required bump, not one increment per PR. Documentation-only, test-only, and internal CI changes normally need no changeset unless they should appear in release notes. Do not add a changeset to the generated version PR itself.
+Multiple pending changesets are combined into one release using the highest required bump, not one increment per PR. Documentation-only, test-only, and internal CI changes normally use an **empty changeset** (`pnpm changeset --empty`), which satisfies the PR check without a version bump or release notes. Use a versioned changeset if they should appear in release notes. Do not add a changeset to the generated version PR itself.
 
 Example changeset:
 
