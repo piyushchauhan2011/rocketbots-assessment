@@ -180,7 +180,7 @@ jobs:
           fi
       - name: Open or update version PR
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: pnpm version:release
           title: 'chore(release): version application'
