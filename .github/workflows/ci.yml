@@ -31,6 +31,10 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: printf '%s\n' "$PR_TITLE" | pnpm commitlint
       - name: Validate changesets
+        # Version PRs consume their changesets; all other PRs still require one.
+        if: >-
+          github.head_ref != 'changeset-release/main' ||
+          github.event.pull_request.head.repo.full_name != github.repository
         run: pnpm changeset status --since origin/main
 
   quality:
