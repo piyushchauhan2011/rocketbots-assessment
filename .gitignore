@@ -4,6 +4,8 @@ coverage/
 playwright-report/
 test-results/
 cucumber-report.html
+allure-results/
+allure-report/
 bundle-budget-report.md
 .DS_Store
 docs/api/

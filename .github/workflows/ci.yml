@@ -76,8 +76,30 @@ jobs:
           path: bundle-budget-report.md
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
+      - name: Set up Java for Allure
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Browser tests
         run: pnpm test:e2e
+      - name: Generate Allure report
+        if: always() && hashFiles('allure-results/*-result.json') != ''
+        run: pnpm report:e2e
+      - name: Upload Allure report
+        if: always() && hashFiles('allure-report/index.html') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report/
+          if-no-files-found: error
+      - name: Upload Allure results
+        if: always() && hashFiles('allure-results/*-result.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
+          if-no-files-found: error
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
