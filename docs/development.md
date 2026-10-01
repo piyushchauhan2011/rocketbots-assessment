@@ -58,6 +58,8 @@ GitHub Actions uses Node.js 22 and a frozen pnpm install. The quality job gates 
 
 A separate non-blocking duplication job scans `src` and publishes its measurements on pull requests.
 
+The PR-title job checks Changesets using `pnpm changeset status --since origin/main`. It fetches full Git history so the detached PR checkout has a merge base with the remote default branch; a shallow checkout is insufficient.
+
 ## Contributions, versioning, and releases
 
 ### Developer checklist
