@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
 import { useFlowUiStore } from '@/stores/flowUi'
@@ -9,7 +9,6 @@ const vueFlowMocks = vi.hoisted(() => ({
   findNode: vi.fn(),
   getViewport: vi.fn(() => ({ zoom: 1 })),
   setCenter: vi.fn(),
-  updateNode: vi.fn(),
 }))
 
 vi.mock('@vue-flow/core', async () => {
@@ -21,7 +20,8 @@ vi.mock('@vue-flow/core', async () => {
       name: 'VueFlowMock',
       props: { nodes: Array, edges: Array },
       emits: ['node-click', 'node-drag-start', 'node-drag-stop'],
-      template: '<div><slot /></div>',
+      template:
+        '<div><slot /><template v-for="node in nodes" :key="node.id"><slot :name="\'node-\' + node.type" v-bind="node" :selected="false" /></template></div>',
     }),
     useVueFlow: () => vueFlowMocks,
   }
@@ -48,25 +48,29 @@ const records = [
 ]
 
 beforeAll(() => {
-  vi.stubGlobal('CSS', { escape: (value) => value })
   vi.stubGlobal('matchMedia', () => ({ matches: false }))
   vi.stubGlobal('requestAnimationFrame', (callback) => callback(0))
 })
 beforeEach(() => {
   vueFlowMocks.findNode.mockReset()
   vueFlowMocks.setCenter.mockReset()
-  vueFlowMocks.updateNode.mockReset()
 })
+
+/** @type {import('@vue/test-utils').VueWrapper | undefined} */
+let mounted
+afterEach(() => mounted?.unmount())
 
 function render() {
   const pinia = createPinia()
   const wrapper = mount(FlowCanvas, {
     props: { records },
+    attachTo: document.body,
     global: {
       plugins: [pinia],
       stubs: { Background: true, Controls: true },
     },
   })
+  mounted = wrapper
   return {
     flow: wrapper.findComponent({ name: 'VueFlowMock' }),
     store: useFlowUiStore(pinia),
@@ -82,11 +86,13 @@ describe('FlowCanvas', () => {
     )
 
     expect(nodes.map((node) => node.id)).toEqual(['root', 'message', 'comment'])
+    expect(nodes.every((node) => !('onOpen' in node.data))).toBe(true)
     expect(flow.props('edges')).toHaveLength(2)
 
-    nodes[1].data.onOpen('message')
-    nodes[1].data.onAdd('message')
-    nodes[1].data.onMove('message', 'down')
+    const message = wrapper.findAll('.flow-node-shell')[1]
+    await message.get('.flow-node').trigger('click')
+    await message.get('[aria-label="Add node"]').trigger('click')
+    await message.get('.flow-node').trigger('keydown', { key: 'ArrowDown' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('open-node')).toEqual([['message']])
@@ -147,7 +153,7 @@ describe('FlowCanvas movement and viewport', () => {
       dimensions: { width: 260, height: 140 },
     }
     vueFlowMocks.findNode.mockReturnValue(graphNode)
-    const { store, wrapper } = render()
+    const { flow, store, wrapper } = render()
     const surface =
       /** @type {{ revealNode: (id: string) => Promise<void>, focusNode: (id: string) => Promise<void> }} */ (
         /** @type {unknown} */ (wrapper.vm)
@@ -155,9 +161,10 @@ describe('FlowCanvas movement and viewport', () => {
 
     store.setPosition('message', { x: 32, y: 48 })
     await wrapper.vm.$nextTick()
-    expect(vueFlowMocks.updateNode).toHaveBeenCalledWith('message', {
-      position: { x: 32, y: 48 },
-    })
+    const nodes = /** @type {Array<{ id: string, position: { x: number, y: number } }>} */ (
+      flow.props('nodes')
+    )
+    expect(nodes.find((node) => node.id === 'message')?.position).toEqual({ x: 32, y: 48 })
 
     await surface.revealNode('message')
     expect(vueFlowMocks.setCenter).toHaveBeenCalledWith(134, 78, {
@@ -165,13 +172,7 @@ describe('FlowCanvas movement and viewport', () => {
       duration: 280,
     })
 
-    const shell = document.createElement('div')
-    shell.dataset.id = 'message'
-    const target = document.createElement('button')
-    target.className = 'flow-node'
-    shell.append(target)
-    document.body.append(shell)
     await surface.focusNode('message')
-    expect(document.activeElement).toBe(target)
+    expect(document.activeElement).toBe(wrapper.get('[aria-label="Send Message: Message"]').element)
   })
 })

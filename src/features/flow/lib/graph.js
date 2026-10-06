@@ -38,8 +38,18 @@ function summaryForType(record) {
  * @param {Partial<NodeRecord> | null | undefined} record
  * @returns {string}
  */
+/** @param {Partial<NodeRecord> | null | undefined} record @returns {boolean} */
+function summarizesBody(record) {
+  return record?.type === 'sendMessage' || record?.type === 'addComment'
+}
+
+/**
+ * @param {Partial<NodeRecord> | null | undefined} record
+ * @returns {string}
+ */
 export function getNodeSummary(record) {
-  return descriptionFor(record) || summaryForType(record) || record?.name || 'Flow step'
+  const content = summarizesBody(record) ? '' : descriptionFor(record)
+  return content || summaryForType(record) || record?.name || 'Flow step'
 }
 
 /**

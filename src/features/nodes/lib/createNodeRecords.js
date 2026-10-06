@@ -42,7 +42,6 @@ function createSendMessage(parentId, draft) {
       name: content.name,
       type: 'sendMessage',
       data: {
-        description: content.description,
         payload: [{ type: 'text', text: content.description }],
       },
     },
@@ -63,7 +62,6 @@ function createComment(parentId, draft) {
       name: content.name,
       type: 'addComment',
       data: {
-        description: content.description,
         comment: content.description,
       },
     },

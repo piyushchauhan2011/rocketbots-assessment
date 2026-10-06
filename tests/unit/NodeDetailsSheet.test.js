@@ -89,8 +89,9 @@ describe('NodeDetailsSheet', () => {
   it('trims and saves a valid draft while recording undo history', async () => {
     const { store, wrapper } = await render(messageRecords, 'message')
 
+    await vi.waitFor(() => wrapper.get('#message-0'))
     await wrapper.get('#node-title').setValue('  Updated welcome  ')
-    await wrapper.get('#node-description').setValue('  Updated greeting  ')
+    await wrapper.get('#message-0').setValue('  Updated greeting  ')
     await button(wrapper, 'Save changes').trigger('click')
     await flushPromises()
 
@@ -98,8 +99,7 @@ describe('NodeDetailsSheet', () => {
       ...messageRecords[1],
       name: 'Updated welcome',
       data: {
-        description: 'Updated greeting',
-        payload: [{ type: 'text', text: 'Hello' }],
+        payload: [{ type: 'text', text: 'Updated greeting' }],
       },
     })
     expect(store.undoStack).toEqual([

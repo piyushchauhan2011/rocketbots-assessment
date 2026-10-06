@@ -32,7 +32,15 @@ These are concise architecture decision records for choices that materially shap
 
 **Decision:** Persist the validated record array under `rocketbots-flow:v1`. Persist canvas positions separately under `rocketbots-flow-positions:v2`.
 
-**Consequences:** Reloads preserve edits without inventing a server API. Writes are simple and atomic at the application level, but browser storage limits constrain attachment size and data is local to one browser profile.
+**Consequences:** Reloads preserve edits without inventing a server API. Writes are simple and atomic at the application level. Images stay as data URLs because the payload endpoint cannot accept uploads. Each image is limited to 750 KiB, a message to four images, and the encoded total to 3 MiB, which keeps the snapshot inside the browser storage quota.
+
+## One body of text per step
+
+**Context:** A separate description copied from the message or comment drifts from the text the editor actually sends.
+
+**Decision:** The create dialog's description becomes the message text or the comment. Canvas cards read that same field. Business hours keep a description because that step has no other body.
+
+**Consequences:** Editing the message or comment updates the card. Payload nodes that never had a description do not gain a second copy when they are opened.
 
 ## Parent-linked records as the domain model
 

@@ -3,10 +3,11 @@ import { Grid2X2 } from '@lucide/vue'
 import { Background } from '@vue-flow/background'
 import { ControlButton, Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
-import { computed, defineComponent, nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, provide, reactive, ref, watch } from 'vue'
 
 import { useFlowUiStore } from '@/stores/flowUi'
 
+import { flowCanvasKey } from '../lib/canvasContext'
 import { buildFlowEdges, buildFlowNodes, nextNodeId } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
 
@@ -14,10 +15,10 @@ import BaseFlowNode from './BaseFlowNode.vue'
 /** @typedef {import('@/features/nodes/lib/types.js').NodeId} NodeId */
 /** @typedef {import('@/features/nodes/lib/types.js').Position} NodePosition */
 /** @typedef {'up' | 'down' | 'left' | 'right'} MoveDirection */
-/** @typedef {{ revealNode: (nodeId: NodeId) => Promise<void> }} ViewportBridgeSurface */
 /** @typedef {{ nodeId: string, position: NodePosition }} DragStart */
 /** @typedef {{ node: { id: string, selectable?: boolean, position: NodePosition } }} FlowNodeEvent */
 
+const FLOW_CANVAS_ID = 'flow-canvas'
 const MOTION_MS = 280
 /** Live coordinates while a branch is sliding. These override stored positions until the move finishes. */
 const animatedPositions = reactive(/** @type {Record<string, NodePosition>} */ ({}))
@@ -27,29 +28,25 @@ const animatedPositions = reactive(/** @type {Record<string, NodePosition>} */ (
  * @param {string} nodeId
  * @param {BranchMotion} motion
  * @param {number} progress
- * @param {(nodeId: string, position: NodePosition) => void} updateNode
  */
-function paintBranch(nodeId, motion, progress, updateNode) {
+function paintBranch(nodeId, motion, progress) {
   const eased = 1 - (1 - progress) ** 3
-  const position = {
+  animatedPositions[nodeId] = {
     x: motion.from.x + (motion.to.x - motion.from.x) * eased,
     y: motion.from.y + (motion.to.y - motion.from.y) * eased,
   }
-  animatedPositions[nodeId] = position
-  updateNode(nodeId, position)
 }
 
 /**
  * @param {Map<string, BranchMotion>} motions
  * @param {number} timestamp
  * @param {string} draggingNodeId
- * @param {(nodeId: string, position: NodePosition) => void} updateNode
  * @returns {boolean}
  */
-function advanceBranchMotions(motions, timestamp, draggingNodeId, updateNode) {
+function advanceBranchMotions(motions, timestamp, draggingNodeId) {
   const sample = motions.values().next().value
   if (sample && timestamp < sample.started) {
-    motions.forEach((motion, nodeId) => paintBranch(nodeId, motion, 1, updateNode))
+    motions.forEach((motion, nodeId) => paintBranch(nodeId, motion, 1))
     motions.clear()
     return false
   }
@@ -60,7 +57,7 @@ function advanceBranchMotions(motions, timestamp, draggingNodeId, updateNode) {
       return
     }
     const progress = reduceMotion ? 1 : Math.min(1, (timestamp - motion.started) / MOTION_MS)
-    paintBranch(nodeId, motion, progress, updateNode)
+    paintBranch(nodeId, motion, progress)
     if (progress >= 1) motions.delete(nodeId)
   })
   return motions.size > 0
@@ -70,7 +67,6 @@ function advanceBranchMotions(motions, timestamp, draggingNodeId, updateNode) {
  * @param {{
  *   draggingNodeId: () => string,
  *   findNode: (nodeId: string) => { position: NodePosition } | undefined,
- *   updateNode: (nodeId: string, position: NodePosition) => void,
  * }} options
  */
 function createBranchMotion(options) {
@@ -80,12 +76,7 @@ function createBranchMotion(options) {
 
   /** @param {number} timestamp */
   function step(timestamp) {
-    const pending = advanceBranchMotions(
-      motions,
-      timestamp,
-      options.draggingNodeId(),
-      options.updateNode,
-    )
+    const pending = advanceBranchMotions(motions, timestamp, options.draggingNodeId())
     if (pending) requestAnimationFrame(step)
     else running = false
   }
@@ -109,71 +100,32 @@ function createBranchMotion(options) {
   return { sync }
 }
 
-const ViewportBridge = defineComponent({
-  name: 'ViewportBridge',
-  props: {
-    draggingNodeId: { type: String, default: '' },
-  },
-  setup(props, { expose }) {
-    const { findNode, getViewport, setCenter, updateNode } = useVueFlow()
-    const store = useFlowUiStore()
-    const motion = createBranchMotion({
-      draggingNodeId: () => props.draggingNodeId,
-      findNode,
-      updateNode: (nodeId, position) => updateNode(nodeId, { position }),
-    })
-    watch(
-      () => store.positions,
-      (positions) => motion.sync(positions),
-    )
-    /** @param {NodeId} nodeId */
-    async function centerOnNode(nodeId) {
-      await nextTick()
-      let node = findNode(String(nodeId))
-      if (!node?.dimensions?.width) {
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
-        node = findNode(String(nodeId))
-      }
-      if (!node) return
-      const width = node.dimensions?.width || 260
-      const height = node.dimensions?.height || 140
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      setCenter(node.position.x + width / 2, node.position.y + height / 2, {
-        zoom: getViewport().zoom,
-        duration: reduceMotion ? 0 : 280,
-      })
-    }
-    expose({ revealNode: centerOnNode })
-    return () => null
-  },
-})
-
 const props = /** @type {{ records: NodeRecord[] }} */ (
   defineProps({ records: { type: Array, required: true } })
 )
 const emit = defineEmits(['open-node', 'add-node'])
 const store = useFlowUiStore()
-const bridge = ref(/** @type {ViewportBridgeSurface | null} */ (null))
 const dragStart = ref(/** @type {DragStart | null} */ (null))
 const showGrid = ref(true)
+/** @type {Map<string, HTMLElement>} */
+const nodeButtons = new Map()
+const { findNode, getViewport, setCenter } = useVueFlow({ id: FLOW_CANVAS_ID })
+const motion = createBranchMotion({
+  draggingNodeId: () => dragStart.value?.nodeId || '',
+  findNode,
+})
+watch(
+  () => store.positions,
+  (positions) => motion.sync(positions),
+)
 
 const nodes = computed(() =>
-  buildFlowNodes(props.records, { ...store.positions, ...animatedPositions })
-    .map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        onOpen: openNode,
-        onAdd: (/** @type {string} */ parentId) => emit('add-node', parentId),
-        onMove: moveSelection,
-      },
-    }))
-    .sort(
-      (left, right) =>
-        left.position.y - right.position.y ||
-        left.position.x - right.position.x ||
-        String(left.id).localeCompare(String(right.id)),
-    ),
+  buildFlowNodes(props.records, { ...store.positions, ...animatedPositions }).sort(
+    (left, right) =>
+      left.position.y - right.position.y ||
+      left.position.x - right.position.x ||
+      String(left.id).localeCompare(String(right.id)),
+  ),
 )
 const edges = computed(() => buildFlowEdges(props.records))
 
@@ -182,6 +134,19 @@ function openNode(nodeId) {
   store.focusNode(nodeId)
   emit('open-node', nodeId)
 }
+/** @param {string} nodeId */
+function addNode(nodeId) {
+  emit('add-node', nodeId)
+}
+/**
+ * @param {string} nodeId
+ * @param {HTMLElement | null} element
+ */
+function registerNode(nodeId, element) {
+  if (element) nodeButtons.set(String(nodeId), element)
+  else nodeButtons.delete(String(nodeId))
+}
+provide(flowCanvasKey, { openNode, addNode, moveNode: moveSelection, registerNode })
 /**
  * @param {string} nodeId
  * @param {MoveDirection} direction
@@ -214,22 +179,37 @@ function onDragStop({ node }) {
   store.record({ kind: 'move', nodeId: node.id, before, after })
 }
 
+let focusRequest = 0
 /** @param {NodeId} nodeId */
 async function focusNode(nodeId) {
+  const request = ++focusRequest
   await nextTick()
-  ;/** @type {HTMLElement | null} */ (
-    document.querySelector(`[data-id="${CSS.escape(String(nodeId))}"] .flow-node`)
-  )?.focus()
+  if (request !== focusRequest) return
+  nodeButtons.get(String(nodeId))?.focus()
 }
 /** @param {NodeId} nodeId */
 async function revealNode(nodeId) {
-  await bridge.value?.revealNode(nodeId)
+  await nextTick()
+  let node = findNode(String(nodeId))
+  if (!node?.dimensions?.width) {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+    node = findNode(String(nodeId))
+  }
+  if (!node) return
+  const width = node.dimensions?.width || 260
+  const height = node.dimensions?.height || 140
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+    zoom: getViewport().zoom,
+    duration: reduceMotion ? 0 : 280,
+  })
 }
 defineExpose({ focusNode, revealNode })
 </script>
 
 <template>
   <VueFlow
+    :id="FLOW_CANVAS_ID"
     class="h-full w-full bg-muted/20"
     :nodes="nodes"
     :edges="edges"
@@ -242,7 +222,6 @@ defineExpose({ focusNode, revealNode })
     @node-drag-start="onDragStart"
     @node-drag-stop="onDragStop"
   >
-    <ViewportBridge ref="bridge" :dragging-node-id="dragStart?.nodeId || ''" />
     <Background v-if="showGrid" :gap="20" pattern-color="oklch(0.88 0.01 255)" :size="1" />
     <Controls position="bottom-right">
       <ControlButton

@@ -95,6 +95,18 @@ describe('graph utilities', () => {
     expect(getNodeSummary(canonical[1])).toBe('Business hours - UTC')
     expect(getNodeSummary(canonical[2])).toBe('success path')
     expect(getNodeSummary({ name: 'Custom', data: { description: 'Explicit' } })).toBe('Explicit')
+    expect(
+      getNodeSummary({
+        type: 'sendMessage',
+        data: { description: 'Old card', payload: [{ type: 'text', text: 'Edited message' }] },
+      }),
+    ).toBe('Edited message')
+    expect(
+      getNodeSummary({
+        type: 'addComment',
+        data: { description: 'Old card', comment: 'Edited note' },
+      }),
+    ).toBe('Edited note')
   })
 })
 
