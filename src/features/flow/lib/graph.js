@@ -34,10 +34,6 @@ function summaryForType(record) {
   return SUMMARY_BY_TYPE[record.type](/** @type {NodeRecord} */ (record))
 }
 
-/**
- * @param {Partial<NodeRecord> | null | undefined} record
- * @returns {string}
- */
 /** @param {Partial<NodeRecord> | null | undefined} record @returns {boolean} */
 function summarizesBody(record) {
   return record?.type === 'sendMessage' || record?.type === 'addComment'

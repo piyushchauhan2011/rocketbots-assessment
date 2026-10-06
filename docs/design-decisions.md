@@ -56,7 +56,7 @@ These are concise architecture decision records for choices that materially shap
 
 **Decision:** Store positions independently. On insert, place the new step where the displaced child sat and slide that subtree down by the rows the insertion needs. On delete, slide the reconnected subtree back up. Leave every other node where it is, and animate the move.
 
-**Consequences:** Manual arrangement of unrelated branches survives an edit. The edited branch stays in a vertical sequence instead of colliding or jumping sideways. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
+**Consequences:** Manual arrangement of unrelated branches survives an edit. The edited branch stays in a vertical sequence instead of colliding or jumping sideways. A short overlay draws the slide, then those coordinates are dropped, including when the node itself is removed. Stored positions remain the record that survives the animation. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
 
 ## URL-driven node details
 
@@ -68,11 +68,11 @@ These are concise architecture decision records for choices that materially shap
 
 ## Bounded command history
 
-**Context:** Move and edit undo/redo improves usability, but unbounded snapshots consume memory and browser storage semantics differ from domain mutations.
+**Context:** Move, edit, create, and delete should share one undo stack. Unbounded snapshots would grow without a limit, and browser storage is a poor place for transient history.
 
-**Decision:** Keep up to 50 move or update commands in Pinia. Do not include create and delete operations.
+**Decision:** Keep up to 50 commands in Pinia. Moves and edits store the changed node. Creates and deletes store the record list and the position map before and after the change.
 
-**Consequences:** Common corrections are reversible with predictable memory use. The UI must communicate the narrower history scope, and native text undo must remain untouched inside form controls.
+**Consequences:** A mistaken create or delete can be reversed, including the branch reflow. History stays in memory, and native text undo remains untouched inside form controls.
 
 ## Lazy action-driven features
 

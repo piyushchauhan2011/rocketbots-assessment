@@ -7,6 +7,7 @@ import { computed, nextTick, provide, reactive, ref, watch } from 'vue'
 
 import { useFlowUiStore } from '@/stores/flowUi'
 
+import { createBranchMotion } from '../lib/branchMotion'
 import { flowCanvasKey } from '../lib/canvasContext'
 import { buildFlowEdges, buildFlowNodes, nextNodeId } from '../lib/graph'
 import BaseFlowNode from './BaseFlowNode.vue'
@@ -19,86 +20,7 @@ import BaseFlowNode from './BaseFlowNode.vue'
 /** @typedef {{ node: { id: string, selectable?: boolean, position: NodePosition } }} FlowNodeEvent */
 
 const FLOW_CANVAS_ID = 'flow-canvas'
-const MOTION_MS = 280
-/** Live coordinates while a branch is sliding. These override stored positions until the move finishes. */
-const animatedPositions = reactive(/** @type {Record<string, NodePosition>} */ ({}))
-/** @typedef {{ from: NodePosition, to: NodePosition, started: number }} BranchMotion */
-
-/**
- * @param {string} nodeId
- * @param {BranchMotion} motion
- * @param {number} progress
- */
-function paintBranch(nodeId, motion, progress) {
-  const eased = 1 - (1 - progress) ** 3
-  animatedPositions[nodeId] = {
-    x: motion.from.x + (motion.to.x - motion.from.x) * eased,
-    y: motion.from.y + (motion.to.y - motion.from.y) * eased,
-  }
-}
-
-/**
- * @param {Map<string, BranchMotion>} motions
- * @param {number} timestamp
- * @param {string} draggingNodeId
- * @returns {boolean}
- */
-function advanceBranchMotions(motions, timestamp, draggingNodeId) {
-  const sample = motions.values().next().value
-  if (sample && timestamp < sample.started) {
-    motions.forEach((motion, nodeId) => paintBranch(nodeId, motion, 1))
-    motions.clear()
-    return false
-  }
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  motions.forEach((motion, nodeId) => {
-    if (nodeId === draggingNodeId) {
-      motions.delete(nodeId)
-      return
-    }
-    const progress = reduceMotion ? 1 : Math.min(1, (timestamp - motion.started) / MOTION_MS)
-    paintBranch(nodeId, motion, progress)
-    if (progress >= 1) motions.delete(nodeId)
-  })
-  return motions.size > 0
-}
-
-/**
- * @param {{
- *   draggingNodeId: () => string,
- *   findNode: (nodeId: string) => { position: NodePosition } | undefined,
- * }} options
- */
-function createBranchMotion(options) {
-  /** @type {Map<string, BranchMotion>} */
-  const motions = new Map()
-  let running = false
-
-  /** @param {number} timestamp */
-  function step(timestamp) {
-    const pending = advanceBranchMotions(motions, timestamp, options.draggingNodeId())
-    if (pending) requestAnimationFrame(step)
-    else running = false
-  }
-
-  /** @param {Record<string, NodePosition>} positions */
-  function sync(positions) {
-    const started = performance.now()
-    Object.entries(positions).forEach(([nodeId, position]) => {
-      if (nodeId === options.draggingNodeId()) return
-      const node = options.findNode(nodeId)
-      if (!node || (node.position.x === position.x && node.position.y === position.y)) return
-      const origin = { x: node.position.x, y: node.position.y }
-      animatedPositions[nodeId] = origin
-      motions.set(nodeId, { from: origin, to: { ...position }, started })
-    })
-    if (!motions.size || running) return
-    running = true
-    requestAnimationFrame(step)
-  }
-
-  return { sync }
-}
+/** @typedef {import('../lib/branchMotion.js').PositionOverlay} PositionOverlay */
 
 const props = /** @type {{ records: NodeRecord[] }} */ (
   defineProps({ records: { type: Array, required: true } })
@@ -109,14 +31,20 @@ const dragStart = ref(/** @type {DragStart | null} */ (null))
 const showGrid = ref(true)
 /** @type {Map<string, HTMLElement>} */
 const nodeButtons = new Map()
+/** Coordinates in flight. They override the store until the slide ends or the node is removed. */
+const animatedPositions = reactive(/** @type {PositionOverlay} */ ({}))
 const { findNode, getViewport, setCenter } = useVueFlow({ id: FLOW_CANVAS_ID })
-const motion = createBranchMotion({
+const motion = createBranchMotion(animatedPositions, {
   draggingNodeId: () => dragStart.value?.nodeId || '',
   findNode,
 })
 watch(
   () => store.positions,
   (positions) => motion.sync(positions),
+)
+watch(
+  () => props.records.map((record) => String(record.id)),
+  (ids) => motion.prune(ids),
 )
 
 const nodes = computed(() =>
@@ -172,9 +100,12 @@ function onDragStart({ node }) {
 function onDragStop({ node }) {
   const before = dragStart.value?.position
   const after = { ...node.position }
-  animatedPositions[node.id] = after
   dragStart.value = null
-  if (!before || (before.x === after.x && before.y === after.y)) return
+  if (!before || (before.x === after.x && before.y === after.y)) {
+    delete animatedPositions[node.id]
+    return
+  }
+  animatedPositions[node.id] = after
   store.setPosition(node.id, after)
   store.record({ kind: 'move', nodeId: node.id, before, after })
 }

@@ -70,6 +70,15 @@
  * @property {NodeRecord} afterRecord
  */
 
-/** @typedef {FlowNodeCommandMove | FlowNodeCommandUpdate} FlowNodeCommand */
+/**
+ * @typedef {object} FlowNodeCommandGraph
+ * @property {'graph'} kind
+ * @property {NodeRecord[]} beforeRecords
+ * @property {NodeRecord[]} afterRecords
+ * @property {Record<string, Position>} beforePositions
+ * @property {Record<string, Position>} afterPositions
+ */
+
+/** @typedef {FlowNodeCommandMove | FlowNodeCommandUpdate | FlowNodeCommandGraph} FlowNodeCommand */
 
 export {}

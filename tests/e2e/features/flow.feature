@@ -97,3 +97,18 @@ Feature: Flow builder workflows
       | device  |
       | desktop |
       | mobile  |
+
+  Scenario: Create a node from the page button and undo it
+    Given I use a "desktop" browser
+    And I open the canonical flow
+    Then "Adds after Welcome Message" is visible
+    When I click the "Create New Node" button
+    Then "Adds this step after Welcome Message." is visible
+    When I enter the node title "Page step" and description "Added from the page"
+    And I create the node
+    Then the flow contains 8 nodes
+    When I close the details drawer
+    And the "Undo" button is enabled
+    When I click the "Undo" button
+    Then the flow contains 7 nodes
+    And "Page step" is absent

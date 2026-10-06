@@ -47,12 +47,18 @@ describe('CreateNodeDialog', () => {
     ])
   })
 
-  it('describes insertion position and removes unavailable node types', async () => {
+  it('describes insertion position and disables business hours after a schedule step', async () => {
     const view = render({ allowHours: false, hasChild: false, parentName: 'Final note' })
 
     expect(view.text()).toContain('Adds this step after Final note.')
     await view.get('#create-type').trigger('click')
-    expect(view.text()).not.toContain('Business Hours')
+    const hours = view
+      .findAll('[role="option"]')
+      .find((option) => option.text().includes('Business Hours'))
+    expect(hours?.text()).toContain('Not available after Business Hours')
+    expect(hours?.attributes('disabled')).toBeDefined()
+    await hours?.trigger('click')
+    expect(view.get('[role="combobox"]').text()).toContain('Send Message')
   })
 
   it('closes with Escape and restores the previously focused element', async () => {

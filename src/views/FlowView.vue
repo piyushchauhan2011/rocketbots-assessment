@@ -117,9 +117,9 @@ function openNode(nodeId) {
   )
 }
 /** @param {string | null} nodeId */
-function restoreFocus(nodeId) {
+async function restoreFocus(nodeId) {
   if (records.value.some((record) => String(record.id) === String(nodeId))) {
-    if (nodeId !== null) canvas.value?.focusNode(nodeId)
+    if (nodeId !== null) await canvas.value?.focusNode?.(nodeId)
   } else {
     canvasElement.value?.focus()
   }
@@ -143,6 +143,17 @@ const insertParent = computed(() =>
 const parentHasChild = computed(() =>
   records.value.some((record) => String(record.parentId) === String(insertParent.value?.id)),
 )
+const pageCreateParent = computed(() => {
+  const parentId = defaultCreateParentId(records.value, store.focusedNodeId)
+  return records.value.find((record) => String(record.id) === String(parentId)) || null
+})
+const pageCreateTarget = computed(() => {
+  const parent = pageCreateParent.value
+  if (!parent) return ''
+  const name = parent.type === 'trigger' ? 'Trigger' : parent.name || 'this step'
+  const hasChild = records.value.some((record) => String(record.parentId) === String(parent.id))
+  return hasChild ? `Inserts between ${name} and the next step` : `Adds after ${name}`
+})
 
 /**
  * @param {string} parentId
@@ -151,6 +162,7 @@ const parentHasChild = computed(() =>
  */
 async function createNode(parentId, type, draft) {
   const created = createNodeRecords(parentId, type, draft)
+  const beforeRecords = records.value
   const previous = { ...store.positions }
   const updates = positionsForSplice(records.value, parentId, created, store.positions)
   store.setPositions(updates)
@@ -162,9 +174,16 @@ async function createNode(parentId, type, draft) {
     toast.error(result.error.message)
     return
   }
+  store.record({
+    kind: 'graph',
+    beforeRecords,
+    afterRecords: next,
+    beforePositions: previous,
+    afterPositions: { ...store.positions },
+  })
   closeCreate()
   openNode(String(created[0].id))
-  await canvas.value?.revealNode(String(created[0].id))
+  await canvas.value?.revealNode?.(String(created[0].id))
   toast.success(`${created[0].name || 'Node'} created`)
 }
 
@@ -181,10 +200,18 @@ function submitCreate(draft) {
     <div
       class="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-lg bg-background/85 p-1.5 shadow-md backdrop-blur"
     >
-      <Button type="button" :disabled="!records.length" @click="openCreateFromPage">
-        <Plus />
-        Create New Node
-      </Button>
+      <div class="grid justify-items-start">
+        <Button
+          type="button"
+          :disabled="!records.length"
+          aria-describedby="create-target"
+          @click="openCreateFromPage"
+        >
+          <Plus />
+          Create New Node
+        </Button>
+        <p id="create-target" class="px-2 text-xs text-muted-foreground">{{ pageCreateTarget }}</p>
+      </div>
       <Button
         variant="ghost"
         size="icon"

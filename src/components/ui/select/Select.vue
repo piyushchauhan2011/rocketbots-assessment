@@ -2,7 +2,13 @@
 import { ChevronDown } from '@lucide/vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-/** @typedef {{ value: string, label: string }} SelectOption */
+/**
+ * @typedef {object} SelectOption
+ * @property {string} value
+ * @property {string} label
+ * @property {boolean} [disabled]
+ * @property {string} [hint]
+ */
 /** @typedef {import('vue').PropType<SelectOption[]>} SelectOptionsProp */
 
 const props =
@@ -30,7 +36,7 @@ function close() {
 /** @param {number} index */
 function choose(index) {
   const option = props.options[index]
-  if (!option) return
+  if (!option || option.disabled) return
   emit('update:modelValue', option.value)
   close()
   ;/** @type {HTMLButtonElement | null} */ (root.value?.querySelector('button'))?.focus()
@@ -103,13 +109,15 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown))
         <button
           type="button"
           role="option"
-          class="flex w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+          class="flex w-full flex-col rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
           :aria-selected="option.value === modelValue"
+          :disabled="option.disabled"
           :class="index === activeIndex && 'bg-muted'"
           @click="choose(index)"
           @mouseenter="activeIndex = index"
         >
           {{ option.label }}
+          <span v-if="option.hint" class="text-xs text-muted-foreground">{{ option.hint }}</span>
         </button>
       </li>
     </ul>

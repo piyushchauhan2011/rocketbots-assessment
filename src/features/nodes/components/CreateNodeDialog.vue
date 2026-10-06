@@ -31,11 +31,16 @@ const type = ref(/** @type {CreateNodeType} */ ('sendMessage'))
 const submitted = ref(false)
 const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
-const typeOptions = [
+const typeOptions = computed(() => [
   { value: 'sendMessage', label: 'Send Message' },
   { value: 'addComment', label: 'Add Comments' },
-  ...(props.allowHours ? [{ value: 'businessHours', label: 'Business Hours' }] : []),
-]
+  {
+    value: 'businessHours',
+    label: 'Business Hours',
+    disabled: !props.allowHours,
+    hint: props.allowHours ? undefined : 'Not available after Business Hours',
+  },
+])
 
 const validation = computed(() =>
   createNodeSchema.safeParse({

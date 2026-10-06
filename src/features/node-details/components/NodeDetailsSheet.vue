@@ -218,9 +218,10 @@ watch(open, (isOpen) => {
 })
 
 watch(
-  [record, open],
-  () => {
-    if (record.value && !editable.value && open.value) {
+  [record, open, routeId],
+  ([current, isOpen, id], previous) => {
+    const removedWhileOpen = previous?.[0] && !current && previous[2] === id && isOpen
+    if (removedWhileOpen || (current && !editable.value && isOpen)) {
       router.replace({ name: 'flow' })
       return
     }
@@ -293,6 +294,7 @@ async function deleteNode() {
   if (!current) return
   const name = current.name || 'Node'
   const nodeId = String(current.id)
+  const beforeRecords = props.records
   const next = removeNode(props.records, current.id)
   const previous = { ...store.positions }
   const updates = positionsAfterRemoval(props.records, current.id, store.positions)
@@ -307,6 +309,13 @@ async function deleteNode() {
     toast.error(result.error.message)
   } else {
     store.removePositions(next.removedIds)
+    store.record({
+      kind: 'graph',
+      beforeRecords,
+      afterRecords: next.records,
+      beforePositions: previous,
+      afterPositions: { ...store.positions },
+    })
     toast.success(`${name} deleted`)
   }
   confirmMode.value = null

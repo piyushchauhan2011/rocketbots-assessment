@@ -191,7 +191,7 @@ describe('NodeDetailsSheet deletion', () => {
         data: { comment: 'Notify', description: 'Notify' },
       },
     ]
-    const { router, wrapper } = await render(records, 'hours')
+    const { router, store, wrapper } = await render(records, 'hours')
 
     await button(wrapper, 'Delete').trigger('click')
     expect(wrapper.get('[role="alertdialog"]').text()).toContain(
@@ -203,5 +203,16 @@ describe('NodeDetailsSheet deletion', () => {
     expect(mocks.replace).toHaveBeenCalledWith([records[0], { ...records[4], parentId: 'root' }])
     expect(router.currentRoute.value.fullPath).toBe('/')
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Office hours deleted')
+    const command = store.undoStack[0]
+    expect(command?.kind).toBe('graph')
+    if (command?.kind !== 'graph') return
+    expect(command.beforeRecords.map((record) => record.id)).toEqual([
+      'root',
+      'hours',
+      'success',
+      'failure',
+      'child',
+    ])
+    expect(command.afterRecords.map((record) => record.id)).toEqual(['root', 'child'])
   })
 })

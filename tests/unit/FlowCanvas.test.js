@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FlowCanvas from '@/features/flow/components/FlowCanvas.vue'
+import { Y_GAP } from '@/features/flow/lib/graph'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 const vueFlowMocks = vi.hoisted(() => ({
@@ -174,5 +175,25 @@ describe('FlowCanvas movement and viewport', () => {
 
     await surface.focusNode('message')
     expect(document.activeElement).toBe(wrapper.get('[aria-label="Send Message: Message"]').element)
+  })
+})
+
+describe('FlowCanvas overlay cleanup', () => {
+  it('forgets overlay coordinates when a node leaves the canvas', async () => {
+    const { flow, wrapper } = render()
+    const setRecords = /** @type {(props: { records: NodeRecord[] }) => Promise<void>} */ (
+      wrapper.setProps.bind(wrapper)
+    )
+    flow.vm.$emit('node-drag-start', {
+      node: { id: 'message', position: { x: 32, y: 48 } },
+    })
+
+    await setRecords({ records: records.filter((record) => record.id !== 'message') })
+    await setRecords({ records })
+
+    const nodes = /** @type {Array<{ id: string, position: { x: number, y: number } }>} */ (
+      flow.props('nodes')
+    )
+    expect(nodes.find((node) => node.id === 'message')?.position).toEqual({ x: 0, y: Y_GAP })
   })
 })
