@@ -42,13 +42,13 @@ These are concise architecture decision records for choices that materially shap
 
 **Consequences:** Persistence remains compatible with the supplied shape. Rendering, navigation, insertion, deletion, and layout can be tested without mounting Vue.
 
-## Preserve user positions across graph edits
+## Reflow only the edited branch
 
-**Context:** Re-running full layout after every mutation would move nodes the user intentionally arranged.
+**Context:** Re-running full layout after every mutation would move nodes the user intentionally arranged. Keeping every existing coordinate frozen when a node is inserted stacks the new step on top of its child.
 
-**Decision:** Store positions independently. Keep positions for existing IDs and calculate only missing positions for newly created records.
+**Decision:** Store positions independently. On insert, place the new step where the displaced child sat and slide that subtree down by the rows the insertion needs. On delete, slide the reconnected subtree back up. Leave every other node where it is, and animate the move.
 
-**Consequences:** Editing is spatially stable. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
+**Consequences:** Manual arrangement of unrelated branches survives an edit. The edited branch stays in a vertical sequence instead of colliding or jumping sideways. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
 
 ## URL-driven node details
 

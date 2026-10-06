@@ -67,7 +67,7 @@ Mutations optimistically replace the cached snapshot, persist the complete recor
 
 Each record identifies its parent with `parentId`; roots use `-1`. Business Hours records own Success and Failure connector records. Pure functions in `src/features/flow/lib/graph.js` derive Vue Flow nodes, edges, navigation targets, splice operations, deletion rewiring, and deterministic fallback positions.
 
-Canvas positions are separate from domain records. Existing manual positions survive graph edits, while new records receive positions derived from the graph layout.
+Canvas positions are separate from domain records. Unaffected nodes keep their coordinates. Inserting or deleting a step reflows only that branch: the new step takes the opened gap, and the displaced subtree slides down or back up.
 
 ## Loading and performance
 

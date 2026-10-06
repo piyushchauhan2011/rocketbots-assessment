@@ -1,5 +1,5 @@
 <script setup>
-import { Redo2, RotateCcw, Undo2 } from '@lucide/vue'
+import { Plus, Redo2, RotateCcw, Undo2 } from '@lucide/vue'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -9,11 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import {
-  missingLayoutPositions,
-  positionsForAddedNodes,
-  spliceNodes,
-} from '@/features/flow/lib/graph'
+import { defaultCreateParentId, positionsForSplice, spliceNodes } from '@/features/flow/lib/graph'
 import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
 import { useFlowUiStore } from '@/stores/flowUi'
@@ -133,6 +129,10 @@ function restoreFocus(nodeId) {
 function openCreate(parentId) {
   createParentId.value = parentId
 }
+function openCreateFromPage() {
+  const parentId = defaultCreateParentId(records.value, store.focusedNodeId)
+  if (parentId) openCreate(parentId)
+}
 function closeCreate() {
   createParentId.value = null
 }
@@ -152,12 +152,12 @@ const parentHasChild = computed(() =>
 async function createNode(parentId, type, draft) {
   const created = createNodeRecords(parentId, type, draft)
   const previous = { ...store.positions }
-  store.setPositions(missingLayoutPositions(records.value, store.positions))
+  const updates = positionsForSplice(records.value, parentId, created, store.positions)
+  store.setPositions(updates)
   const next = spliceNodes(records.value, parentId, created)
-  store.setPositions(positionsForAddedNodes(next, store.positions))
   const result = await replaceMutation.mutateResult(next)
   if (result.isErr()) {
-    store.removePositions(created.map((record) => record.id))
+    store.removePositions(Object.keys(updates).filter((nodeId) => !previous[nodeId]))
     store.setPositions(previous)
     toast.error(result.error.message)
     return
@@ -181,6 +181,10 @@ function submitCreate(draft) {
     <div
       class="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-lg bg-background/85 p-1.5 shadow-md backdrop-blur"
     >
+      <Button type="button" :disabled="!records.length" @click="openCreateFromPage">
+        <Plus />
+        Create New Node
+      </Button>
       <Button
         variant="ghost"
         size="icon"

@@ -10,7 +10,7 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getNodeSummary, missingLayoutPositions, removeNode } from '@/features/flow/lib/graph'
+import { getNodeSummary, positionsAfterRemoval, removeNode } from '@/features/flow/lib/graph'
 import {
   useReplaceNodesMutation,
   useUpdateNodeMutation,
@@ -277,12 +277,16 @@ async function deleteNode() {
   const name = current.name || 'Node'
   const nodeId = String(current.id)
   const next = removeNode(props.records, current.id)
+  const previous = { ...store.positions }
+  const updates = positionsAfterRemoval(props.records, current.id, store.positions)
   confirmMode.value = 'leaving'
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
-  store.setPositions(missingLayoutPositions(props.records, store.positions))
+  store.setPositions(updates)
   const result = await replaceMutation.mutateResult(next.records)
   if (result.isErr()) {
+    store.removePositions(Object.keys(updates).filter((key) => !previous[key]))
+    store.setPositions(previous)
     toast.error(result.error.message)
   } else {
     store.removePositions(next.removedIds)
