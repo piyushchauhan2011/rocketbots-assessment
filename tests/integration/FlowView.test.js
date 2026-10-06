@@ -48,6 +48,51 @@ async function render(path = '/') {
 }
 
 describe('FlowView integration', () => {
+  it('opens the create dialog from the Create New Node button', async () => {
+    const { wrapper } = await render()
+    const create = wrapper
+      .findAll('button')
+      .find((button) => button.text().trim() === 'Create New Node')
+
+    expect(create).toBeTruthy()
+    await create?.trigger('click')
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain('Adds after Welcome Message')
+      expect(document.body.textContent).toContain('Adds this step after Welcome Message.')
+    })
+
+    await wrapper.get('#create-title').setValue('Page step')
+    await wrapper.get('#create-description').setValue('Added from the page')
+    await wrapper.get('form').trigger('submit')
+    await vi.waitFor(() => expect(wrapper.get('[data-test="canvas"]').text()).toBe('8'))
+
+    await wrapper.get('[aria-label="Undo"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-test="canvas"]').text()).toBe('7')
+      expect(document.body.textContent).not.toContain('Page step')
+    })
+  })
+
+  it('restores a deleted node from the Undo button', async () => {
+    const { wrapper } = await render()
+
+    await wrapper.get('[data-test="canvas"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Delete'))
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().trim() === 'Delete')
+      ?.trigger('click')
+    const confirm = wrapper
+      .get('[role="alertdialog"]')
+      .findAll('button')
+      .find((button) => button.text().trim() === 'Delete')
+    await confirm?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.get('[data-test="canvas"]').text()).toBe('6'))
+
+    await wrapper.get('[aria-label="Undo"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.get('[data-test="canvas"]').text()).toBe('7'))
+  })
+
   it('renders the seven records and opens editable nodes through the route', async () => {
     const { wrapper, router } = await render()
     expect(wrapper.get('[data-test="canvas"]').text()).toBe('7')

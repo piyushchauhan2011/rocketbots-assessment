@@ -18,6 +18,8 @@ describe('flow UI state', () => {
     })
     store.removePositions([1])
     expect(store.positions['1']).toBeUndefined()
+    store.replacePositions({ kept: { x: 8, y: 9 } })
+    expect(store.positions).toEqual({ kept: { x: 8, y: 9 } })
   })
 
   it('caps history at 50 and clears redo on a new command', () => {

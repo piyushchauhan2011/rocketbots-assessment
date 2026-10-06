@@ -2,7 +2,10 @@ import { ok } from 'neverthrow'
 import { computed } from 'vue'
 import { toast } from 'vue-sonner'
 
-import { useUpdateNodeMutation } from '@/features/nodes/composables/useNodes'
+import {
+  useReplaceNodesMutation,
+  useUpdateNodeMutation,
+} from '@/features/nodes/composables/useNodes'
 import { useFlowUiStore } from '@/stores/flowUi'
 
 /** @typedef {import('@/features/nodes/lib/types.js').FlowNodeCommand} FlowNodeCommand */
@@ -10,8 +13,10 @@ import { useFlowUiStore } from '@/stores/flowUi'
 export function useFlowHistory() {
   const store = useFlowUiStore()
   const updateMutation = useUpdateNodeMutation()
-  const canUndo = computed(() => store.undoStack.length > 0 && !updateMutation.isPending.value)
-  const canRedo = computed(() => store.redoStack.length > 0 && !updateMutation.isPending.value)
+  const replaceMutation = useReplaceNodesMutation()
+  const busy = computed(() => updateMutation.isPending.value || replaceMutation.isPending.value)
+  const canUndo = computed(() => store.undoStack.length > 0 && !busy.value)
+  const canRedo = computed(() => store.redoStack.length > 0 && !busy.value)
 
   /**
    * @param {FlowNodeCommand} command
@@ -21,6 +26,13 @@ export function useFlowHistory() {
     if (command.kind === 'move') {
       store.setPosition(command.nodeId, command[direction])
       return ok(undefined)
+    }
+    if (command.kind === 'graph') {
+      const records = direction === 'before' ? command.beforeRecords : command.afterRecords
+      const positions = direction === 'before' ? command.beforePositions : command.afterPositions
+      const result = await replaceMutation.mutateResult(records)
+      if (result.isOk()) store.replacePositions(positions)
+      return result
     }
     const record = direction === 'before' ? command.beforeRecord : command.afterRecord
     return updateMutation.mutateResult(record)

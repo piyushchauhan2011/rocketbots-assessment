@@ -1,14 +1,7 @@
 import { Background } from '@vue-flow/background'
 import { VueFlow } from '@vue-flow/core'
-import { fn } from 'storybook/test'
 
 import BaseFlowNode from './BaseFlowNode.vue'
-
-const actions = {
-  onAdd: fn(),
-  onMove: fn(),
-  onOpen: fn(),
-}
 
 const nodes = [
   {
@@ -16,7 +9,6 @@ const nodes = [
     type: 'trigger',
     position: { x: 300, y: 0 },
     data: {
-      ...actions,
       record: {
         id: 'trigger',
         parentId: -1,
@@ -33,7 +25,6 @@ const nodes = [
     type: 'sendMessage',
     position: { x: 300, y: 190 },
     data: {
-      ...actions,
       record: {
         id: 'message',
         parentId: 'trigger',
@@ -50,7 +41,6 @@ const nodes = [
     type: 'businessHours',
     position: { x: 300, y: 380 },
     data: {
-      ...actions,
       record: {
         id: 'hours',
         parentId: 'message',
@@ -67,7 +57,6 @@ const nodes = [
     type: 'dateTimeConnector',
     position: { x: 120, y: 570 },
     data: {
-      ...actions,
       record: {
         id: 'success',
         parentId: 'hours',
@@ -84,7 +73,6 @@ const nodes = [
     type: 'dateTimeConnector',
     position: { x: 480, y: 570 },
     data: {
-      ...actions,
       record: {
         id: 'failure',
         parentId: 'hours',
@@ -101,7 +89,6 @@ const nodes = [
     type: 'addComment',
     position: { x: 120, y: 720 },
     data: {
-      ...actions,
       record: {
         id: 'comment',
         parentId: 'success',

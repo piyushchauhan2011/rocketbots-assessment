@@ -10,7 +10,7 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getNodeSummary, missingLayoutPositions, removeNode } from '@/features/flow/lib/graph'
+import { getNodeSummary, positionsAfterRemoval, removeNode } from '@/features/flow/lib/graph'
 import {
   useReplaceNodesMutation,
   useUpdateNodeMutation,
@@ -128,26 +128,33 @@ function copy(value) {
   return /** @type {T} */ (JSON.parse(JSON.stringify(value)))
 }
 
-/** @param {NodeRecord} source @returns {DraftValue} */
-function makeDraft(source) {
-  const data = copy(source.data || {})
+/** @param {NodeRecord} source @param {NodeRecord['data']} data */
+function normalizeDraftData(source, data) {
   data.description = data.description || getNodeSummary(source)
   if (source.type === 'sendMessage') data.payload = data.payload || []
   if (source.type === 'addComment') data.comment = data.comment || ''
+}
+
+/** @param {NodeRecord} source @returns {DraftValue} */
+function makeDraft(source) {
+  const data = copy(source.data || {})
+  normalizeDraftData(source, data)
   return { name: source.name || '', data }
 }
 
 /**
  * @param {DraftValue} value
+ * @param {NodeKind | undefined} type
  * @returns {Pick<DraftValidation, 'title' | 'description'>}
  */
-function validateCommonDraft(value) {
+function validateCommonDraft(value, type) {
   /** @type {Pick<DraftValidation, 'title' | 'description'>} */
   const errors = {}
   const title = value.name.trim()
   const description = String(value.data.description || '').trim()
   if (!title) errors.title = 'Title is required'
   else if (title.length > TITLE_MAX) errors.title = 'Title must be 80 characters or less'
+  if (type === 'trigger' || type === 'dateTimeConnector') return errors
   if (!description) errors.description = 'Description is required'
   else if (description.length > DESCRIPTION_MAX) {
     errors.description = 'Description must be 240 characters or less'
@@ -190,7 +197,7 @@ function validateDraft(value) {
   const validator = record.value ? TYPE_VALIDATORS[record.value.type] : undefined
   return {
     businessHours: { rowErrors: [], firstError: null },
-    ...validateCommonDraft(value),
+    ...validateCommonDraft(value, record.value?.type),
     ...validator?.(value),
   }
 }
@@ -210,9 +217,10 @@ watch(open, (isOpen) => {
 })
 
 watch(
-  [record, open],
-  () => {
-    if (record.value && !editable.value && open.value) {
+  [record, open, routeId],
+  ([current, isOpen, id], previous) => {
+    const removedWhileOpen = previous?.[0] && !current && previous[2] === id && isOpen
+    if (removedWhileOpen || (current && !editable.value && isOpen)) {
       router.replace({ name: 'flow' })
       return
     }
@@ -255,9 +263,14 @@ async function save() {
     name: draft.value.name.trim(),
     data: copy(draft.value.data),
   }
-  afterRecord.data.description = String(afterRecord.data.description).trim()
+  afterRecord.data.description = String(afterRecord.data.description || '').trim()
   if (afterRecord.type === 'addComment') {
     afterRecord.data.comment = String(afterRecord.data.comment).trim()
+  }
+  if (afterRecord.type === 'sendMessage') {
+    afterRecord.data.payload = (afterRecord.data.payload || []).map((item) =>
+      item.type === 'text' ? { ...item, text: item.text.trim() } : item,
+    )
   }
   const result = await updateMutation.mutateResult(afterRecord)
   if (result.isErr()) {
@@ -276,16 +289,28 @@ async function deleteNode() {
   if (!current) return
   const name = current.name || 'Node'
   const nodeId = String(current.id)
+  const beforeRecords = props.records
   const next = removeNode(props.records, current.id)
+  const previous = { ...store.positions }
+  const updates = positionsAfterRemoval(props.records, current.id, store.positions)
   confirmMode.value = 'leaving'
   await router.push({ name: 'flow' })
   emit('closed', nodeId)
-  store.setPositions(missingLayoutPositions(props.records, store.positions))
+  store.setPositions(updates)
   const result = await replaceMutation.mutateResult(next.records)
   if (result.isErr()) {
+    store.removePositions(Object.keys(updates).filter((key) => !previous[key]))
+    store.setPositions(previous)
     toast.error(result.error.message)
   } else {
     store.removePositions(next.removedIds)
+    store.record({
+      kind: 'graph',
+      beforeRecords,
+      afterRecords: next.records,
+      beforePositions: previous,
+      afterPositions: { ...store.positions },
+    })
     toast.success(`${name} deleted`)
   }
   confirmMode.value = null

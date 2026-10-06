@@ -32,7 +32,15 @@ These are concise architecture decision records for choices that materially shap
 
 **Decision:** Persist the validated record array under `rocketbots-flow:v1`. Persist canvas positions separately under `rocketbots-flow-positions:v2`.
 
-**Consequences:** Reloads preserve edits without inventing a server API. Writes are simple and atomic at the application level, but browser storage limits constrain attachment size and data is local to one browser profile.
+**Consequences:** Reloads preserve edits without inventing a server API. Writes are simple and atomic at the application level. Images stay as data URLs because the payload endpoint cannot accept uploads. Each image is limited to 750 KiB, a message to four images, and the encoded total to 3 MiB, which keeps the snapshot inside the browser storage quota.
+
+## One body of text per step
+
+**Context:** The brief asks every canvas card to show a description, truncated, separate from the message or comment that the step sends.
+
+**Decision:** Store `data.description` on every step. Canvas cards read that field and clamp it to two lines. Creating a message or comment also seeds its body from the same text. Payload steps with no description fall back to their message, comment, or schedule summary until one is saved.
+
+**Consequences:** The card follows the description field. Editing a message or comment does not rewrite that line. Opening a payload step fills an empty description from the summary so the field can be saved.
 
 ## Parent-linked records as the domain model
 
@@ -42,13 +50,13 @@ These are concise architecture decision records for choices that materially shap
 
 **Consequences:** Persistence remains compatible with the supplied shape. Rendering, navigation, insertion, deletion, and layout can be tested without mounting Vue.
 
-## Preserve user positions across graph edits
+## Reflow only the edited branch
 
-**Context:** Re-running full layout after every mutation would move nodes the user intentionally arranged.
+**Context:** Re-running full layout after every mutation would move nodes the user intentionally arranged. Keeping every existing coordinate frozen when a node is inserted stacks the new step on top of its child.
 
-**Decision:** Store positions independently. Keep positions for existing IDs and calculate only missing positions for newly created records.
+**Decision:** Store positions independently. On insert, place the new step where the displaced child sat and slide that subtree down by the rows the insertion needs. On delete, slide the reconnected subtree back up. Leave every other node where it is, and animate the move.
 
-**Consequences:** Editing is spatially stable. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
+**Consequences:** Manual arrangement of unrelated branches survives an edit. The edited branch stays in a vertical sequence instead of colliding or jumping sideways. A short overlay draws the slide, then those coordinates are dropped, including when the node itself is removed. Stored positions remain the record that survives the animation. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
 
 ## URL-driven node details
 
@@ -60,11 +68,11 @@ These are concise architecture decision records for choices that materially shap
 
 ## Bounded command history
 
-**Context:** Move and edit undo/redo improves usability, but unbounded snapshots consume memory and browser storage semantics differ from domain mutations.
+**Context:** Move, edit, create, and delete should share one undo stack. Unbounded snapshots would grow without a limit, and browser storage is a poor place for transient history.
 
-**Decision:** Keep up to 50 move or update commands in Pinia. Do not include create and delete operations.
+**Decision:** Keep up to 50 commands in Pinia. Moves and edits store the changed node. Creates and deletes store the record list and the position map before and after the change.
 
-**Consequences:** Common corrections are reversible with predictable memory use. The UI must communicate the narrower history scope, and native text undo must remain untouched inside form controls.
+**Consequences:** A mistaken create or delete can be reversed, including the branch reflow. History stays in memory, and native text undo remains untouched inside form controls.
 
 ## Lazy action-driven features
 

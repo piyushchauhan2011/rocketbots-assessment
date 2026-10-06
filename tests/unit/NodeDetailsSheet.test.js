@@ -89,8 +89,9 @@ describe('NodeDetailsSheet', () => {
   it('trims and saves a valid draft while recording undo history', async () => {
     const { store, wrapper } = await render(messageRecords, 'message')
 
+    await vi.waitFor(() => wrapper.get('#message-0'))
     await wrapper.get('#node-title').setValue('  Updated welcome  ')
-    await wrapper.get('#node-description').setValue('  Updated greeting  ')
+    await wrapper.get('#message-0').setValue('  Updated greeting  ')
     await button(wrapper, 'Save changes').trigger('click')
     await flushPromises()
 
@@ -98,8 +99,8 @@ describe('NodeDetailsSheet', () => {
       ...messageRecords[1],
       name: 'Updated welcome',
       data: {
-        description: 'Updated greeting',
-        payload: [{ type: 'text', text: 'Hello' }],
+        description: 'Initial greeting',
+        payload: [{ type: 'text', text: 'Updated greeting' }],
       },
     })
     expect(store.undoStack).toEqual([
@@ -191,7 +192,7 @@ describe('NodeDetailsSheet deletion', () => {
         data: { comment: 'Notify', description: 'Notify' },
       },
     ]
-    const { router, wrapper } = await render(records, 'hours')
+    const { router, store, wrapper } = await render(records, 'hours')
 
     await button(wrapper, 'Delete').trigger('click')
     expect(wrapper.get('[role="alertdialog"]').text()).toContain(
@@ -203,5 +204,16 @@ describe('NodeDetailsSheet deletion', () => {
     expect(mocks.replace).toHaveBeenCalledWith([records[0], { ...records[4], parentId: 'root' }])
     expect(router.currentRoute.value.fullPath).toBe('/')
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Office hours deleted')
+    const command = store.undoStack[0]
+    expect(command?.kind).toBe('graph')
+    if (command?.kind !== 'graph') return
+    expect(command.beforeRecords.map((record) => record.id)).toEqual([
+      'root',
+      'hours',
+      'success',
+      'failure',
+      'child',
+    ])
+    expect(command.afterRecords.map((record) => record.id)).toEqual(['root', 'child'])
   })
 })

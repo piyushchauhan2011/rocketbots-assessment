@@ -17,8 +17,7 @@ import { createNodeSchema } from '@/features/nodes/lib/nodeSchemas'
  * @property {CreateNodeType} type
  */
 
-const props = defineProps({
-  allowHours: { type: Boolean, required: true },
+defineProps({
   parentName: { type: String, required: true },
   hasChild: { type: Boolean, required: true },
 })
@@ -34,7 +33,7 @@ const returnFocus = document.activeElement instanceof HTMLElement ? document.act
 const typeOptions = [
   { value: 'sendMessage', label: 'Send Message' },
   { value: 'addComment', label: 'Add Comments' },
-  ...(props.allowHours ? [{ value: 'businessHours', label: 'Business Hours' }] : []),
+  { value: 'businessHours', label: 'Business Hours' },
 ]
 
 const validation = computed(() =>

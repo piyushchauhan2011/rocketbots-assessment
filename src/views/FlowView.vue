@@ -1,5 +1,5 @@
 <script setup>
-import { Redo2, RotateCcw, Undo2 } from '@lucide/vue'
+import { Plus, Redo2, RotateCcw, Undo2 } from '@lucide/vue'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -9,11 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFlowHistory } from '@/features/flow/composables/useFlowHistory'
 import { useFlowShortcuts } from '@/features/flow/composables/useFlowShortcuts'
-import {
-  missingLayoutPositions,
-  positionsForAddedNodes,
-  spliceNodes,
-} from '@/features/flow/lib/graph'
+import { defaultCreateParentId, positionsForSplice, spliceNodes } from '@/features/flow/lib/graph'
 import { useNodesQuery, useReplaceNodesMutation } from '@/features/nodes/composables/useNodes'
 import { createNodeRecords } from '@/features/nodes/lib/createNodeRecords'
 import { useFlowUiStore } from '@/stores/flowUi'
@@ -121,9 +117,9 @@ function openNode(nodeId) {
   )
 }
 /** @param {string | null} nodeId */
-function restoreFocus(nodeId) {
+async function restoreFocus(nodeId) {
   if (records.value.some((record) => String(record.id) === String(nodeId))) {
-    if (nodeId !== null) canvas.value?.focusNode(nodeId)
+    if (nodeId !== null) await canvas.value?.focusNode?.(nodeId)
   } else {
     canvasElement.value?.focus()
   }
@@ -132,6 +128,10 @@ function restoreFocus(nodeId) {
 /** @param {string} parentId */
 function openCreate(parentId) {
   createParentId.value = parentId
+}
+function openCreateFromPage() {
+  const parentId = defaultCreateParentId(records.value, store.focusedNodeId)
+  if (parentId) openCreate(parentId)
 }
 function closeCreate() {
   createParentId.value = null
@@ -143,6 +143,17 @@ const insertParent = computed(() =>
 const parentHasChild = computed(() =>
   records.value.some((record) => String(record.parentId) === String(insertParent.value?.id)),
 )
+const pageCreateParent = computed(() => {
+  const parentId = defaultCreateParentId(records.value, store.focusedNodeId)
+  return records.value.find((record) => String(record.id) === String(parentId)) || null
+})
+const pageCreateTarget = computed(() => {
+  const parent = pageCreateParent.value
+  if (!parent) return ''
+  const name = parent.type === 'trigger' ? 'Trigger' : parent.name || 'this step'
+  const hasChild = records.value.some((record) => String(record.parentId) === String(parent.id))
+  return hasChild ? `Inserts between ${name} and the next step` : `Adds after ${name}`
+})
 
 /**
  * @param {string} parentId
@@ -151,20 +162,28 @@ const parentHasChild = computed(() =>
  */
 async function createNode(parentId, type, draft) {
   const created = createNodeRecords(parentId, type, draft)
+  const beforeRecords = records.value
   const previous = { ...store.positions }
-  store.setPositions(missingLayoutPositions(records.value, store.positions))
+  const updates = positionsForSplice(records.value, parentId, created, store.positions)
+  store.setPositions(updates)
   const next = spliceNodes(records.value, parentId, created)
-  store.setPositions(positionsForAddedNodes(next, store.positions))
   const result = await replaceMutation.mutateResult(next)
   if (result.isErr()) {
-    store.removePositions(created.map((record) => record.id))
+    store.removePositions(Object.keys(updates).filter((nodeId) => !previous[nodeId]))
     store.setPositions(previous)
     toast.error(result.error.message)
     return
   }
+  store.record({
+    kind: 'graph',
+    beforeRecords,
+    afterRecords: next,
+    beforePositions: previous,
+    afterPositions: { ...store.positions },
+  })
   closeCreate()
   openNode(String(created[0].id))
-  await canvas.value?.revealNode(String(created[0].id))
+  await canvas.value?.revealNode?.(String(created[0].id))
   toast.success(`${created[0].name || 'Node'} created`)
 }
 
@@ -181,6 +200,18 @@ function submitCreate(draft) {
     <div
       class="absolute top-3 left-3 z-30 flex items-center gap-2 rounded-lg bg-background/85 p-1.5 shadow-md backdrop-blur"
     >
+      <div class="grid justify-items-start">
+        <Button
+          type="button"
+          :disabled="!records.length"
+          aria-describedby="create-target"
+          @click="openCreateFromPage"
+        >
+          <Plus />
+          Create New Node
+        </Button>
+        <p id="create-target" class="px-2 text-xs text-muted-foreground">{{ pageCreateTarget }}</p>
+      </div>
       <Button
         variant="ghost"
         size="icon"
@@ -271,7 +302,6 @@ function submitCreate(draft) {
     />
     <CreateNodeDialog
       v-if="insertParent"
-      :allow-hours="insertParent.type !== 'dateTime'"
       :parent-name="insertParent.type === 'trigger' ? 'Trigger' : insertParent.name || 'this step'"
       :has-child="parentHasChild"
       @close="closeCreate"

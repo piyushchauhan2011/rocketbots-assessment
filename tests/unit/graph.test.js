@@ -6,9 +6,11 @@ import {
   getDescendantIds,
   getNodeSummary,
   layoutGraph,
+  defaultCreateParentId,
   missingLayoutPositions,
   nextNodeId,
-  positionsForAddedNodes,
+  positionsAfterRemoval,
+  positionsForSplice,
   removeNode,
   spliceNodes,
   X_GAP,
@@ -93,6 +95,18 @@ describe('graph utilities', () => {
     expect(getNodeSummary(canonical[1])).toBe('Business hours - UTC')
     expect(getNodeSummary(canonical[2])).toBe('success path')
     expect(getNodeSummary({ name: 'Custom', data: { description: 'Explicit' } })).toBe('Explicit')
+    expect(
+      getNodeSummary({
+        type: 'sendMessage',
+        data: { description: 'Old card', payload: [{ type: 'text', text: 'Edited message' }] },
+      }),
+    ).toBe('Old card')
+    expect(
+      getNodeSummary({
+        type: 'addComment',
+        data: { description: 'Old card', comment: 'Edited note' },
+      }),
+    ).toBe('Old card')
   })
 })
 
@@ -139,7 +153,7 @@ describe('removeNode', () => {
   })
 })
 
-describe('positionsForAddedNodes', () => {
+describe('positionsForSplice', () => {
   it('fills only missing layout positions', () => {
     const layout = layoutGraph(canonical)
     const missing = missingLayoutPositions(canonical, { message: { x: 9, y: 11 } })
@@ -147,32 +161,120 @@ describe('positionsForAddedNodes', () => {
     expect(missing['1']).toEqual(layout['1'])
   })
 
-  it('places a new node from its parent and leaves saved nodes alone', () => {
-    const saved = layoutGraph(canonical)
-    /** @type {NodeRecord[]} */
-    const records = [
-      ...canonical,
-      { id: 'note', parentId: 'success', type: 'addComment', name: 'Note', data: {} },
-    ]
-    const added = positionsForAddedNodes(records, saved)
-    expect(Object.keys(added)).toEqual(['note'])
-    expect(added.note.y).toBe(saved.message.y)
-    expect(added.note.x).not.toBe(saved.message.x)
+  it('puts the inserted step on the child slot and slides that subtree down', () => {
+    const updates = positionsForSplice(
+      [
+        { id: '1', parentId: -1, type: 'trigger', data: {} },
+        { id: 'child', parentId: '1', type: 'sendMessage', data: {} },
+      ],
+      '1',
+      [{ id: 'inserted', parentId: '1', type: 'addComment', data: {} }],
+      { 1: { x: 0, y: 0 }, child: { x: 0, y: Y_GAP } },
+    )
+    expect(updates.inserted).toEqual({ x: 0, y: Y_GAP })
+    expect(updates.child).toEqual({ x: 0, y: Y_GAP * 2 })
+    expect(updates['1']).toBeUndefined()
   })
 
-  it('shifts a new node aside when its slot is already taken', () => {
+  it('leaves an unaffected branch where it is', () => {
+    /** @type {NodeRecord[]} */
+    const records = [
+      { id: 'root', parentId: -1, type: 'trigger', data: {} },
+      { id: 'left', parentId: 'root', type: 'sendMessage', data: {} },
+      { id: 'right', parentId: 'root', type: 'addComment', data: {} },
+      { id: 'leaf', parentId: 'left', type: 'sendMessage', data: {} },
+    ]
+    const updates = positionsForSplice(
+      records,
+      'left',
+      [{ id: 'mid', parentId: 'left', type: 'addComment', data: {} }],
+      {
+        root: { x: 0, y: 0 },
+        left: { x: 0, y: Y_GAP },
+        right: { x: X_GAP, y: Y_GAP },
+        leaf: { x: 0, y: Y_GAP * 2 },
+      },
+    )
+    expect(updates.mid).toEqual({ x: 0, y: Y_GAP * 2 })
+    expect(updates.leaf).toEqual({ x: 0, y: Y_GAP * 3 })
+    expect(updates.right).toBeUndefined()
+    expect(updates.root).toBeUndefined()
+    expect(updates.left).toBeUndefined()
+  })
+})
+
+describe('positionsForSplice placement', () => {
+  it('opens two rows when business hours are inserted above a child', () => {
+    const updates = positionsForSplice(
+      [
+        { id: '1', parentId: -1, type: 'trigger', data: {} },
+        { id: 'child', parentId: '1', type: 'sendMessage', data: {} },
+      ],
+      '1',
+      [
+        { id: 'hours', parentId: '1', type: 'dateTime', data: {} },
+        { id: 'ok', parentId: 'hours', type: 'dateTimeConnector', data: {} },
+        { id: 'no', parentId: 'hours', type: 'dateTimeConnector', data: {} },
+      ],
+      { 1: { x: 0, y: 0 }, child: { x: 40, y: Y_GAP } },
+    )
+    expect(updates.hours).toEqual({ x: 40, y: Y_GAP })
+    expect(updates.ok).toEqual({ x: 40, y: Y_GAP * 2 })
+    expect(updates.no).toEqual({ x: 40 + X_GAP, y: Y_GAP * 2 })
+    expect(updates.child).toEqual({ x: 40, y: Y_GAP * 3 })
+  })
+
+  it('appends below the parent when that step has no child', () => {
+    const updates = positionsForSplice(
+      [{ id: '1', parentId: -1, type: 'trigger', data: {} }],
+      '1',
+      [{ id: 'note', parentId: '1', type: 'addComment', data: {} }],
+      { 1: { x: 10, y: 20 } },
+    )
+    expect(updates.note).toEqual({ x: 10, y: 20 + Y_GAP })
+    expect(updates['1']).toBeUndefined()
+  })
+})
+
+describe('positionsAfterRemoval', () => {
+  it('slides the reconnected child up into the deleted step', () => {
     /** @type {NodeRecord[]} */
     const records = [
       { id: '1', parentId: -1, type: 'trigger', data: {} },
-      { id: 'inserted', parentId: '1', type: 'addComment', data: {} },
-      { id: 'child', parentId: 'inserted', type: 'sendMessage', data: {} },
+      { id: 'mid', parentId: '1', type: 'addComment', data: {} },
+      { id: 'child', parentId: 'mid', type: 'sendMessage', data: {} },
     ]
-    const added = positionsForAddedNodes(records, {
+    const updates = positionsAfterRemoval(records, 'mid', {
       1: { x: 0, y: 0 },
-      child: { x: 0, y: Y_GAP },
+      mid: { x: 0, y: Y_GAP },
+      child: { x: 12, y: Y_GAP * 2 },
     })
-    expect(added.inserted).toEqual({ x: X_GAP, y: Y_GAP })
-    expect(added.child).toBeUndefined()
+    expect(updates.child).toEqual({ x: 12, y: Y_GAP })
+    expect(updates.mid).toBeUndefined()
+    expect(updates['1']).toBeUndefined()
+  })
+
+  it('keeps a child that was placed above the deleted step', () => {
+    /** @type {NodeRecord[]} */
+    const records = [
+      { id: '1', parentId: -1, type: 'trigger', data: {} },
+      { id: 'mid', parentId: '1', type: 'addComment', data: {} },
+      { id: 'child', parentId: 'mid', type: 'sendMessage', data: {} },
+    ]
+    const updates = positionsAfterRemoval(records, 'mid', {
+      1: { x: 0, y: 0 },
+      mid: { x: 0, y: Y_GAP },
+      child: { x: 12, y: 0 },
+    })
+    expect(updates.child).toBeUndefined()
+  })
+})
+
+describe('defaultCreateParentId', () => {
+  it('uses the focused step, then the main-path leaf', () => {
+    expect(defaultCreateParentId(canonical, 'message')).toBe('message')
+    expect(defaultCreateParentId(canonical, 'hours')).toBe('message')
+    expect(defaultCreateParentId(canonical, null)).toBe('message')
   })
 })
 

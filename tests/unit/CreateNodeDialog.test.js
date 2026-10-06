@@ -12,7 +12,6 @@ function render(props = {}) {
   wrapper = mount(CreateNodeDialog, {
     attachTo: document.body,
     props: {
-      allowHours: true,
       hasChild: true,
       parentName: 'Welcome message',
       ...props,
@@ -47,12 +46,17 @@ describe('CreateNodeDialog', () => {
     ])
   })
 
-  it('describes insertion position and removes unavailable node types', async () => {
-    const view = render({ allowHours: false, hasChild: false, parentName: 'Final note' })
+  it('describes insertion position and keeps every node type available', async () => {
+    const view = render({ hasChild: false, parentName: 'Final note' })
 
     expect(view.text()).toContain('Adds this step after Final note.')
     await view.get('#create-type').trigger('click')
-    expect(view.text()).not.toContain('Business Hours')
+    const hours = view
+      .findAll('[role="option"]')
+      .find((option) => option.text().includes('Business Hours'))
+    expect(hours?.attributes('disabled')).toBeUndefined()
+    await hours?.trigger('click')
+    expect(view.get('[role="combobox"]').text()).toContain('Business Hours')
   })
 
   it('closes with Escape and restores the previously focused element', async () => {

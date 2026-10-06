@@ -60,6 +60,16 @@ export const useFlowUiStore = defineStore('flow-ui', {
       this.positions = { ...this.positions, ...entries }
       localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(this.positions))
     },
+    /** @param {Record<string, Position>} entries */
+    replacePositions(entries) {
+      /** @type {Record<string, Position>} */
+      const next = {}
+      Object.entries(entries).forEach(([nodeId, position]) => {
+        next[String(nodeId)] = point(position)
+      })
+      this.positions = next
+      localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(next))
+    },
     /** @param {NodeId[]} ids */
     removePositions(ids) {
       const next = { ...this.positions }

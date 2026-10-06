@@ -1,9 +1,11 @@
 <script setup>
 import { Clock3, MessageSquare, MessageSquareText, Plus, Play, Split } from '@lucide/vue'
 import { Handle, Position } from '@vue-flow/core'
-import { computed } from 'vue'
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue'
 
 import { useFlowUiStore } from '@/stores/flowUi'
+
+import { flowCanvasKey } from '../lib/canvasContext'
 
 /** @typedef {import('@/features/nodes/lib/types.js').NodeRecord} NodeRecord */
 /** @typedef {'up' | 'down' | 'left' | 'right'} MoveDirection */
@@ -12,9 +14,6 @@ import { useFlowUiStore } from '@/stores/flowUi'
  * @property {NodeRecord} record
  * @property {string} summary
  * @property {boolean} hasChildren
- * @property {(nodeId: string) => void} [onOpen]
- * @property {(parentId: string) => void} [onAdd]
- * @property {(nodeId: string, direction: MoveDirection) => void} [onMove]
  */
 
 defineOptions({ inheritAttrs: false })
@@ -48,15 +47,20 @@ const isConnectorNode = computed(() => props.nodeType === 'dateTimeConnector')
 const title = computed(() => props.data.record.name || config.value.label)
 const canAdd = computed(() => props.nodeType !== 'businessHours')
 const store = useFlowUiStore()
+const canvas = inject(flowCanvasKey, null)
+const nodeButton = ref(/** @type {HTMLElement | null} */ (null))
 const highlighted = computed(() => props.selected || store.focusedNodeId === props.id)
 /** @type {Record<string, MoveDirection>} */
 const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
 
+watch(nodeButton, (element) => canvas?.registerNode(props.id, element))
+onBeforeUnmount(() => canvas?.registerNode(props.id, null))
+
 function activate() {
-  if (editable.value) props.data.onOpen?.(props.id)
+  if (editable.value) canvas?.openNode(props.id)
 }
 function requestCreate() {
-  props.data.onAdd?.(props.id)
+  canvas?.addNode(props.id)
 }
 function rememberFocus() {
   if (store.focusedNodeId !== props.id) store.focusNode(props.id)
@@ -67,7 +71,7 @@ function onArrows(event) {
   if (!direction) return
   event.preventDefault()
   event.stopPropagation()
-  props.data.onMove?.(props.id, direction)
+  canvas?.moveNode(props.id, direction)
 }
 </script>
 
@@ -82,6 +86,7 @@ function onArrows(event) {
     <button
       v-if="isConnectorNode"
       type="button"
+      ref="nodeButton"
       class="flow-node mx-auto flex justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       tabindex="0"
       :aria-label="`${title} connector`"
@@ -97,6 +102,7 @@ function onArrows(event) {
     <button
       v-else
       type="button"
+      ref="nodeButton"
       :class="[
         'flow-node w-full rounded-xl border border-border/70 bg-card py-0 text-left text-card-foreground shadow-md shadow-slate-900/6 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
         editable && 'cursor-pointer transition-shadow duration-200 hover:shadow-lg',
