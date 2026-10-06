@@ -100,13 +100,13 @@ describe('graph utilities', () => {
         type: 'sendMessage',
         data: { description: 'Old card', payload: [{ type: 'text', text: 'Edited message' }] },
       }),
-    ).toBe('Edited message')
+    ).toBe('Old card')
     expect(
       getNodeSummary({
         type: 'addComment',
         data: { description: 'Old card', comment: 'Edited note' },
       }),
-    ).toBe('Edited note')
+    ).toBe('Old card')
   })
 })
 

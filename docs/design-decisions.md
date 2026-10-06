@@ -36,11 +36,11 @@ These are concise architecture decision records for choices that materially shap
 
 ## One body of text per step
 
-**Context:** A separate description copied from the message or comment drifts from the text the editor actually sends.
+**Context:** The brief asks every canvas card to show a description, truncated, separate from the message or comment that the step sends.
 
-**Decision:** The create dialog's description becomes the message text or the comment. Canvas cards read that same field. Business hours keep a description because that step has no other body.
+**Decision:** Store `data.description` on every step. Canvas cards read that field and clamp it to two lines. Creating a message or comment also seeds its body from the same text. Payload steps with no description fall back to their message, comment, or schedule summary until one is saved.
 
-**Consequences:** Editing the message or comment updates the card. Payload nodes that never had a description do not gain a second copy when they are opened.
+**Consequences:** The card follows the description field. Editing a message or comment does not rewrite that line. Opening a payload step fills an empty description from the summary so the field can be saved.
 
 ## Parent-linked records as the domain model
 

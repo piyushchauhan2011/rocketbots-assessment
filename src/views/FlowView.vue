@@ -302,7 +302,6 @@ function submitCreate(draft) {
     />
     <CreateNodeDialog
       v-if="insertParent"
-      :allow-hours="insertParent.type !== 'dateTime'"
       :parent-name="insertParent.type === 'trigger' ? 'Trigger' : insertParent.name || 'this step'"
       :has-child="parentHasChild"
       @close="closeCreate"

@@ -130,8 +130,7 @@ function copy(value) {
 
 /** @param {NodeRecord} source @param {NodeRecord['data']} data */
 function normalizeDraftData(source, data) {
-  if (source.type === 'sendMessage' || source.type === 'addComment') delete data.description
-  if (source.type === 'dateTime') data.description = data.description || getNodeSummary(source)
+  data.description = data.description || getNodeSummary(source)
   if (source.type === 'sendMessage') data.payload = data.payload || []
   if (source.type === 'addComment') data.comment = data.comment || ''
 }
@@ -155,7 +154,7 @@ function validateCommonDraft(value, type) {
   const description = String(value.data.description || '').trim()
   if (!title) errors.title = 'Title is required'
   else if (title.length > TITLE_MAX) errors.title = 'Title must be 80 characters or less'
-  if (type !== 'dateTime') return errors
+  if (type === 'trigger' || type === 'dateTimeConnector') return errors
   if (!description) errors.description = 'Description is required'
   else if (description.length > DESCRIPTION_MAX) {
     errors.description = 'Description must be 240 characters or less'
@@ -264,11 +263,7 @@ async function save() {
     name: draft.value.name.trim(),
     data: copy(draft.value.data),
   }
-  if (afterRecord.type === 'dateTime') {
-    afterRecord.data.description = String(afterRecord.data.description).trim()
-  } else {
-    delete afterRecord.data.description
-  }
+  afterRecord.data.description = String(afterRecord.data.description || '').trim()
   if (afterRecord.type === 'addComment') {
     afterRecord.data.comment = String(afterRecord.data.comment).trim()
   }
@@ -390,7 +385,7 @@ async function deleteNode() {
                   />
                   <FieldError id="node-title-error" :message="validationErrors.title" />
                 </div>
-                <div v-if="record.type === 'dateTime'" class="grid gap-2">
+                <div class="grid gap-2">
                   <Label for="node-description">Description</Label>
                   <Textarea
                     id="node-description"

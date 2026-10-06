@@ -99,6 +99,7 @@ describe('NodeDetailsSheet', () => {
       ...messageRecords[1],
       name: 'Updated welcome',
       data: {
+        description: 'Initial greeting',
         payload: [{ type: 'text', text: 'Updated greeting' }],
       },
     })

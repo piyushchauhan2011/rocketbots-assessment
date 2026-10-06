@@ -17,8 +17,7 @@ import { createNodeSchema } from '@/features/nodes/lib/nodeSchemas'
  * @property {CreateNodeType} type
  */
 
-const props = defineProps({
-  allowHours: { type: Boolean, required: true },
+defineProps({
   parentName: { type: String, required: true },
   hasChild: { type: Boolean, required: true },
 })
@@ -31,16 +30,11 @@ const type = ref(/** @type {CreateNodeType} */ ('sendMessage'))
 const submitted = ref(false)
 const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
-const typeOptions = computed(() => [
+const typeOptions = [
   { value: 'sendMessage', label: 'Send Message' },
   { value: 'addComment', label: 'Add Comments' },
-  {
-    value: 'businessHours',
-    label: 'Business Hours',
-    disabled: !props.allowHours,
-    hint: props.allowHours ? undefined : 'Not available after Business Hours',
-  },
-])
+  { value: 'businessHours', label: 'Business Hours' },
+]
 
 const validation = computed(() =>
   createNodeSchema.safeParse({

@@ -6,7 +6,6 @@ export default {
   title: 'Flow/Create node dialog',
   component: CreateNodeDialog,
   args: {
-    allowHours: true,
     hasChild: true,
     parentName: 'Welcome message',
     onClose: fn(),
@@ -34,8 +33,8 @@ export const AddToEnd = {
   },
 }
 
-export const WithoutBusinessHours = {
+export const AddToABranch = {
   args: {
-    allowHours: false,
+    parentName: 'Success',
   },
 }

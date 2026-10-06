@@ -13,6 +13,7 @@ describe('createNodeRecords', () => {
       name: 'Greeting',
       type: 'sendMessage',
       data: {
+        description: 'Hello there',
         payload: [{ type: 'text', text: 'Hello there' }],
       },
     })
@@ -22,7 +23,7 @@ describe('createNodeRecords', () => {
       parentId: 'parent',
       name: 'New Comment',
       type: 'addComment',
-      data: { comment: 'Add an internal note' },
+      data: { description: 'Add an internal note', comment: 'Add an internal note' },
     })
 
     const [hours, success, failure] = createNodeRecords('parent', 'businessHours', {

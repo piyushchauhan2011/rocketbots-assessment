@@ -34,18 +34,13 @@ function summaryForType(record) {
   return SUMMARY_BY_TYPE[record.type](/** @type {NodeRecord} */ (record))
 }
 
-/** @param {Partial<NodeRecord> | null | undefined} record @returns {boolean} */
-function summarizesBody(record) {
-  return record?.type === 'sendMessage' || record?.type === 'addComment'
-}
-
 /**
+ * Canvas cards show the description, then a type summary when a node has none.
  * @param {Partial<NodeRecord> | null | undefined} record
  * @returns {string}
  */
 export function getNodeSummary(record) {
-  const content = summarizesBody(record) ? '' : descriptionFor(record)
-  return content || summaryForType(record) || record?.name || 'Flow step'
+  return descriptionFor(record) || summaryForType(record) || record?.name || 'Flow step'
 }
 
 /**
