@@ -184,14 +184,13 @@ jobs:
         id: changesets
         uses: changesets/action@v2
         with:
-          version: pnpm version:release
-          title: 'chore(release): version application'
-          commit: 'chore(release): version application'
-          createGithubReleases: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          github-token: ${{ secrets.RELEASE_TOKEN }}
+          version-script: pnpm version:release
+          pr-title: 'chore(release): version application'
+          commit-message: 'chore(release): version application'
+          create-github-releases: false
       - name: Publish GitHub Release
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs['has-changesets'] == 'false'
         run: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
