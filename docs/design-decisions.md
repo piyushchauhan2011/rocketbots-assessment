@@ -1,91 +1,59 @@
 # Design decisions
 
-These are concise architecture decision records for choices that materially shape the assessment.
+Architectural tradeoffs behind the assessment implementation.
 
 ## Checked JavaScript instead of application TypeScript
 
-**Context:** The assessment is authored in JavaScript/ES6 but still benefits from static contracts.
+Application and test source are authored in modern ES6 JavaScript. JSDoc type contracts are checked with TypeScript 6 (`jsconfig.native.json`), templates are verified with `vue-tsc`, and TypeDoc builds API documentation directly from JSDoc.
 
-**Decision:** Keep application and test source in JavaScript. Use JSDoc contracts, TypeScript 6 checking, `vue-tsc` for templates, and TypeDoc for API documentation.
+This satisfies the requirement for JavaScript while providing static type safety, autocomplete, and CI validation without a compile-to-JS build step.
 
-**Consequences:** Runtime source stays JavaScript while editor tooling catches cross-module and template mistakes. Complex contracts require disciplined JSDoc, and generated API quality depends on those comments.
+## Single owner for flow records (Vue Query over Pinia)
 
-## One owner for server-shaped records
+TanStack Vue Query exclusively owns node records, query caching, and mutation lifecycles. Pinia manages only UI state: canvas coordinates, active node focus, and undo/redo stacks.
 
-**Context:** Mirroring records between a query cache and a global store creates synchronization and rollback paths.
+Mirroring server records in Pinia would require custom synchronization and rollback logic. Keeping records in Vue Query guarantees that all components observe identical optimistic snapshots during mutations.
 
-**Decision:** TanStack Vue Query exclusively owns node records. Pinia owns only interaction state that is not part of the payload.
+## Whole-snapshot local persistence and size quotas
 
-**Consequences:** All record consumers observe the same optimistic snapshot. Query code carries persistence coordination, while the store remains independent of network state.
+Because the remote payload is read-only and there is no mutation API, the application persists the full validated graph to `localStorage` under `rocketbots-flow:v1`, and canvas positions under `rocketbots-flow-positions:v2`.
 
-## Explicit result values at the repository boundary
+To prevent exceeding the ~5 MB browser storage quota, image uploads are stored as data URLs with strict limits: 750 KiB per image, up to 4 images per message, and 3 MiB maximum total encoded payload per node.
 
-**Context:** Payload, network, parse, response, and storage failures need distinct handling without unobserved promise rejections.
+## Dedicated step description on canvas cards
 
-**Decision:** The repository returns typed `neverthrow` results and never substitutes fake payload data.
+Canvas cards display a concise title and a two-line clamped description (`data.description`) rather than raw message bodies or comments.
 
-**Consequences:** Callers must handle failure as data. The UI can present real errors, and optimistic mutations can reliably restore their previous cache snapshot.
+When creating a message or comment, the description initialises the initial content. Subsequent edits to message or comment text do not overwrite the summary card description. Payload nodes missing a description fall back to their message, comment, or schedule summary until saved.
 
-## Whole-snapshot local persistence
+## Parent-linked records as the canonical domain model
 
-**Context:** The supplied endpoint is read-only and the assessment has no backend mutation contract.
+Vue Flow operates on `{ nodes, edges }` collections, but the canonical data model retains the payload's `parentId` structure (`-1` for root).
 
-**Decision:** Persist the validated record array under `rocketbots-flow:v1`. Persist canvas positions separately under `rocketbots-flow-positions:v2`.
-
-**Consequences:** Reloads preserve edits without inventing a server API. Writes are simple and atomic at the application level. Images stay as data URLs because the payload endpoint cannot accept uploads. Each image is limited to 750 KiB, a message to four images, and the encoded total to 3 MiB, which keeps the snapshot inside the browser storage quota.
-
-## One body of text per step
-
-**Context:** The brief asks every canvas card to show a description, truncated, separate from the message or comment that the step sends.
-
-**Decision:** Store `data.description` on every step. Canvas cards read that field and clamp it to two lines. Creating a message or comment also seeds its body from the same text. Payload steps with no description fall back to their message, comment, or schedule summary until one is saved.
-
-**Consequences:** The card follows the description field. Editing a message or comment does not rewrite that line. Opening a payload step fills an empty description from the summary so the field can be saved.
-
-## Parent-linked records as the domain model
-
-**Context:** Vue Flow uses node and edge collections, while the supplied payload expresses parent relationships.
-
-**Decision:** Keep parent-linked records as the canonical model and derive render nodes and edges with pure graph functions.
-
-**Consequences:** Persistence remains compatible with the supplied shape. Rendering, navigation, insertion, deletion, and layout can be tested without mounting Vue.
+Pure graph functions in `src/features/flow/lib/graph.js` derive edges, positions, insertion splices, and deletion rewiring on demand. This keeps domain data 1:1 compatible with the remote payload and allows graph logic to be tested without mounting Vue components.
 
 ## Reflow only the edited branch
 
-**Context:** Re-running full layout after every mutation would move nodes the user intentionally arranged. Keeping every existing coordinate frozen when a node is inserted stacks the new step on top of its child.
+Running full layout on every mutation shifts nodes that the user intentionally positioned. Freezing all positions causes newly inserted steps to overlap existing children.
 
-**Decision:** Store positions independently. On insert, place the new step where the displaced child sat and slide that subtree down by the rows the insertion needs. On delete, slide the reconnected subtree back up. Leave every other node where it is, and animate the move.
+The editor stores positions independently:
 
-**Consequences:** Manual arrangement of unrelated branches survives an edit. The edited branch stays in a vertical sequence instead of colliding or jumping sideways. A short overlay draws the slide, then those coordinates are dropped, including when the node itself is removed. Stored positions remain the record that survives the animation. Position cleanup must accompany deletion, and storage uses a versioned key so incompatible position formats can be replaced safely.
+- **Insert:** The new node takes the child's position, and the displaced subtree slides down by 1 row (or 2 rows for business hours).
+- **Delete:** The reconnected subtree slides up by the freed rows.
+- **Unrelated branches:** Node positions outside the edited path remain untouched.
+
+A 280ms cubic ease-out animation visually clarifies the branch motion before positions settle into storage.
+
+## Bounded 50-command history in memory
+
+Pinia maintains an in-memory stack of up to 50 undo/redo commands:
+
+- **Moves:** Store previous and next coordinates.
+- **Edits:** Store prior and updated node records.
+- **Creates and deletes:** Store full record snapshots and position maps before and after the mutation.
+
+History is kept in memory rather than `localStorage` to avoid storage churn. Native browser undo within form inputs operates independently and is preserved.
 
 ## URL-driven node details
 
-**Context:** A selected node should support browser history and direct links.
-
-**Decision:** Represent the detail sheet as `/nodes/:nodeId` rather than component-only selection state.
-
-**Consequences:** Back/forward navigation and direct routes work naturally. Vercel must rewrite arbitrary history routes to the SPA entry point.
-
-## Bounded command history
-
-**Context:** Move, edit, create, and delete should share one undo stack. Unbounded snapshots would grow without a limit, and browser storage is a poor place for transient history.
-
-**Decision:** Keep up to 50 commands in Pinia. Moves and edits store the changed node. Creates and deletes store the record list and the position map before and after the change.
-
-**Consequences:** A mistaken create or delete can be reversed, including the branch reflow. History stays in memory, and native text undo remains untouched inside form controls.
-
-## Lazy action-driven features
-
-**Context:** The full canvas and editors are unnecessary before the graph becomes visible or an editing action occurs.
-
-**Decision:** Defer the canvas until viewport intersection and idle time; split details, creation, and editor modules by user action.
-
-**Consequences:** The initial route is smaller. Loading boundaries become architectural behavior and bundle budgets guard against regressions.
-
-## Layered verification
-
-**Context:** Graph rules are cheap to verify in isolation, while routing, persistence, uploads, and keyboard workflows require a browser.
-
-**Decision:** Use Vitest for domain and integration behavior, Cucumber with Playwright for user workflows, checked JSDoc for contracts, and bundle budgets for delivery constraints.
-
-**Consequences:** Failures are usually localized to the cheapest useful layer. CI is longer than a unit-only pipeline but exercises the application surface reviewers use.
+The node detail drawer is bound to the route (`/nodes/:nodeId`) rather than internal component state. Selecting a node updates the browser URL, enabling direct links, bookmarking, and natural back/forward navigation.
