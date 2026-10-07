@@ -67,7 +67,7 @@ Generating the report requires Java 21 (`java` on `PATH` or `JAVA_HOME` set). Ja
 
 GitHub Actions runs the following checks on every pull request:
 
-- **Conventional PR title:** Checks squash commit titles against Conventional Commits and verifies changeset presence via `pnpm changeset status --since origin/main`.
+- **Conventional PR title:** Checks squash commit titles against Conventional Commits and verifies changeset presence via `pnpm changeset status --since origin/main`. Version PRs and Dependabot PRs skip the changeset check.
 - **Quality job:** Runs format check, Oxlint, typecheck (`vue-tsc`), TypeDoc build, Storybook build, unit tests with coverage, bundle budgets check (`pnpm build`), and Playwright browser tests.
 - **Duplication scan:** Runs `jscpd` on `src/` as a non-blocking informational comment.
 
@@ -75,7 +75,7 @@ GitHub Actions runs the following checks on every pull request:
 
 Dependabot (`.github/dependabot.yml`) runs weekly checks on Mondays for npm dependencies and GitHub Actions (up to 5 PRs each).
 
-PR titles use `chore(deps):` or `ci(deps):`. Dependabot does not generate changesets. Before merging an update, add an empty changeset (`pnpm changeset --empty`) or a versioned changeset if release notes are needed.
+PR titles use `chore(deps):` or `ci(deps):`. Dependabot does not generate changesets, so those PRs skip the changeset check and can merge without a release. Push a changeset onto the Dependabot branch only when the bump should appear in the changelog.
 
 ## Contributions, versioning, and releases
 
