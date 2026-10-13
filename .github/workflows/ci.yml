@@ -90,27 +90,27 @@ jobs:
         run: pnpm report:e2e
       - name: Upload Allure report
         if: always() && hashFiles('allure-report/index.html') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: allure-report
           path: allure-report/
           if-no-files-found: error
       - name: Upload Allure results
         if: always() && hashFiles('allure-results/*-result.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: allure-results
           path: allure-results/
           if-no-files-found: error
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage
       - name: Upload Cucumber report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cucumber-report
           path: cucumber-report.html
