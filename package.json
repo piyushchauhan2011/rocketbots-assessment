@@ -55,7 +55,7 @@
     "@storybook/addon-docs": "10.6.0",
     "@storybook/vue3-vite": "10.6.0",
     "@types/node": "26.6.5",
-    "@vitejs/plugin-vue": "6.0.9",
+    "@vitejs/plugin-vue": "6.0.10",
     "@vitest/coverage-v8": "5.0.1",
     "@vue/test-utils": "2.5.1",
     "allure-commandline": "2.46.1",
