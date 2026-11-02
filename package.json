@@ -65,7 +65,7 @@
     "oxlint": "1.85.0",
     "storybook": "10.6.0",
     "typedoc": "^0.28.20",
-    "typescript": "6.0.2",
+    "typescript": "6.0.3",
     "vite": "8.3.0",
     "vitest": "5.0.1",
     "vue-tsc": "3.3.11"
