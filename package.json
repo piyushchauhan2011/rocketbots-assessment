@@ -61,7 +61,7 @@
     "allure-commandline": "2.46.1",
     "allure-cucumberjs": "3.13.0",
     "jsdom": "30.1.1",
-    "oxfmt": "0.70.0",
+    "oxfmt": "0.74.0",
     "oxlint": "1.85.0",
     "storybook": "10.6.0",
     "typedoc": "^0.28.20",
